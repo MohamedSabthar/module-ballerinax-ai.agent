@@ -60,7 +60,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Search\"," +
                     "\"action_input\": {" +
-                        "\"query\": \"Leo DiCaprio girlfriend\"" +
+                        "\"params\": {" +
+                            "\"query\": \"Leo DiCaprio girlfriend\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
@@ -72,7 +74,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Search\"," +
                     "\"action_input\": {" +
-                        "\"query\": \"Camila Morrone age\"" +
+                        "\"params\": {" +
+                            "\"query\": \"Camila Morrone age\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
@@ -86,7 +90,9 @@ public client class MockLLM {
                 "{" +
                     "\"action\": \"Calculator\"," +
                     "\"action_input\": {" +
-                        "\"expression\": \"25 ^ 0.43\"" +
+                        "\"params\": {" +
+                            "\"expression\": \"25 ^ 0.43\"" +
+                        "}" +
                     "}" +
                 "}" +
                 "```";
