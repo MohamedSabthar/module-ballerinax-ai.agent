@@ -75,5 +75,17 @@ release {
 }
 
 task build {
-    dependsOn('ai-ballerina:build')
+    dependsOn(':ai-compiler-plugin:build')
+    dependsOn(':ai-native:build')
+    dependsOn(':ai-ballerina:build')
+    dependsOn(':ai-ballerina-tests:test')
+}
+
+subprojects {
+    configurations {
+        // Temporary workaround: This configuration is not required but is added 
+        // to prevent the Gradle plugin from failing due to its absence.
+        // https://github.com/ballerina-platform/ballerina-library/issues/7628
+        ballerinaStdLibs
+    }
 }

@@ -98,6 +98,30 @@ publishing {
     }
 }
 
+task publishAiPackageToLocal {
+    dependsOn(":${packageName}-ballerina:build")
+    dependsOn(updateTomlFiles)
+    doLast {
+        exec {
+            workingDir project.projectDir
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                commandLine 'cmd', '/c', "bal pack && exit  %%ERRORLEVEL%%"
+            } else {
+                commandLine 'sh', '-c', "bal pack"
+            }
+        }
+        exec {
+            workingDir project.projectDir
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                commandLine 'cmd', '/c', "bal push --repository=local" +
+                        " && exit %%ERRORLEVEL%%"
+            } else {
+                commandLine 'sh', '-c', "bal push --repository=local"
+            }
+        }
+    }
+}
+
 updateTomlFiles.dependsOn copyStdlibs
 
 build.dependsOn "generatePomFileForMavenPublication"
