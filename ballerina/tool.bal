@@ -113,9 +113,14 @@ public isolated class ToolStore {
 }
 
 isolated function getInputArgumentsOfFunction(FunctionTool tool, map<json> inputValues) returns anydata[]|error {
+    // Currently, Ballerina does not provide an API to retrieve default values from a function pointer at runtime.
+    // As a result, it is not possible to invoke a tool that relies on default values.
+    // TODO: update the implementation after ballerina introduce an API to get default values from function pointer
     anydata[] inputArgs = [];
     map<typedesc<anydata>> typedescs = getToolParameterTypes(tool);
     foreach [string, typedesc<anydata>] [parameterName, typedescriptor] in typedescs.entries() {
+        // This may return an error when LLM does not provide a default value
+        // for the default parameter.
         anydata inputArg = check inputValues.get(parameterName).cloneWithType(typedescriptor);
         inputArgs.push(inputArg);
     }

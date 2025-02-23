@@ -43,10 +43,9 @@ import io.ballerina.tools.text.TextDocument;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static io.ballerina.lib.ai.plugin.ToolAnnotationAnalysisTask.DESCRIPTION_FIELD_NAME;
 import static io.ballerina.lib.ai.plugin.ToolAnnotationAnalysisTask.NAME_FIELD_NAME;
@@ -189,35 +188,54 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     private AnnotationNode handleAnnotationHavingFields(AnnotationNode targetNode, ToolAnnotationConfig config) {
         MappingConstructorExpressionNode mappingConstructorNode = getMappingConstructorExpressionNode(targetNode);
 
-        Set<String> existingFieldNames = new HashSet<>();
+        LinkedHashMap<String, MappingFieldNode> existingFields = new LinkedHashMap<>();
+        String lastFieldName = "";
         for (MappingFieldNode field : mappingConstructorNode.fields()) {
             if (field.kind() == SyntaxKind.SPECIFIC_FIELD) {
                 SpecificFieldNode specificFieldNode = (SpecificFieldNode) field;
                 String fieldName = specificFieldNode.fieldName().toSourceCode().trim();
-                existingFieldNames.add(fieldName);
+                lastFieldName = fieldName;
+                existingFields.put(fieldName, specificFieldNode);
             }
         }
-
-        SeparatedNodeList<MappingFieldNode> modifiedFields = mappingConstructorNode.fields();
-        addMissingConfigFields(modifiedFields, existingFieldNames, config);
-
-        // Modify the mapping constructor expression node to include the modified fields.
-        MappingConstructorExpressionNode modifiedMappingConstructorNode = mappingConstructorNode.modify()
-                .withFields(modifiedFields).apply();
+        String mappingConstructorExpression = buildMappingConstructorExpression(config, existingFields, lastFieldName);
+        MappingConstructorExpressionNode modifiedMappingConstructorNode = (MappingConstructorExpressionNode) NodeParser
+                .parseExpression(mappingConstructorExpression);
         return targetNode.modify().withAnnotValue(modifiedMappingConstructorNode).apply();
     }
 
-    private void addMissingConfigFields(SeparatedNodeList<MappingFieldNode> modifiedFields, Set<String> fieldNames,
-                                        ToolAnnotationConfig config) {
-        addFieldIfAbsent(modifiedFields, fieldNames, NAME_FIELD_NAME, config.name());
-        addFieldIfAbsent(modifiedFields, fieldNames, DESCRIPTION_FIELD_NAME, config.description());
-        addFieldIfAbsent(modifiedFields, fieldNames, PARAMETERS_FIELD_NAME, config.parameterSchema());
+    private String buildMappingConstructorExpression(ToolAnnotationConfig config,
+                                                     LinkedHashMap<String, MappingFieldNode> existingFields,
+                                                     String lastFieldName) {
+        boolean lastFieldEndsWithLineBreak = Utils.endsWithNewline(existingFields.get(lastFieldName).toSourceCode());
+        LinkedHashMap<String, MappingFieldNode> modifiedFields = new LinkedHashMap<>(existingFields);
+        addMissingConfigFields(modifiedFields, config);
+
+        StringBuilder mappingConstructorBuilder = new StringBuilder(SyntaxKind.OPEN_BRACE_TOKEN.stringValue());
+        for (Map.Entry<String, MappingFieldNode> entry : existingFields.entrySet()) {
+            if (mappingConstructorBuilder.length() > 1) {
+                mappingConstructorBuilder.append(SyntaxKind.COMMA_TOKEN.stringValue());
+            }
+            String sourceCode = entry.getKey().equals(lastFieldName) && lastFieldEndsWithLineBreak
+                    ? Utils.removeLastNewline(entry.getValue().toSourceCode()) : entry.getValue().toSourceCode();
+            mappingConstructorBuilder.append(sourceCode);
+        }
+
+        if (lastFieldEndsWithLineBreak) {
+            mappingConstructorBuilder.append(System.lineSeparator());
+        }
+        return mappingConstructorBuilder.append(SyntaxKind.CLOSE_BRACE_TOKEN.stringValue()).toString();
     }
 
-    private void addFieldIfAbsent(SeparatedNodeList<MappingFieldNode> fields, Set<String> fieldNames, String fieldName,
-                                  String value) {
-        if (!fieldNames.contains(fieldName)) {
-            fields.add(NodeFactory.createSpecificFieldNode(
+    private void addMissingConfigFields(Map<String, MappingFieldNode> fields, ToolAnnotationConfig config) {
+        addFieldIfAbsent(fields, NAME_FIELD_NAME, config.name());
+        addFieldIfAbsent(fields, DESCRIPTION_FIELD_NAME, config.description());
+        addFieldIfAbsent(fields, PARAMETERS_FIELD_NAME, config.parameterSchema());
+    }
+
+    private void addFieldIfAbsent(Map<String, MappingFieldNode> fields, String fieldName, String value) {
+        if (!fields.containsKey(fieldName)) {
+            fields.put(fieldName, NodeFactory.createSpecificFieldNode(
                     null,
                     NodeFactory.createIdentifierToken(fieldName),
                     NodeFactory.createToken(SyntaxKind.COLON_TOKEN),

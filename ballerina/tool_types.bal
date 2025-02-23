@@ -47,6 +47,8 @@ public type BaseInputTypeSchema record {|
     string description?;
     # Default value of the input
     json default?;
+    # Indicates whether the value can be null.
+    boolean nullable?;
 |};
 
 # Defines a primitive input field in the schema.
@@ -80,6 +82,8 @@ public type AllOfInputSchema record {|
 public type OneOfInputSchema record {|
     # List of possible input types
     JsonSubSchema[] oneOf;
+    # Indicates whether the value can be null.
+    boolean nullable?;
 |};
 
 # Defines a `not` input field in the schema. Follows OpenAPI 3.x specification.
