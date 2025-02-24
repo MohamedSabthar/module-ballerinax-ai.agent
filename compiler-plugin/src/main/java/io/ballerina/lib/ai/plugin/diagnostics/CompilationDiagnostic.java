@@ -25,13 +25,12 @@ import io.ballerina.tools.diagnostics.DiagnosticSeverity;
 import io.ballerina.tools.diagnostics.Location;
 
 import static io.ballerina.tools.diagnostics.DiagnosticSeverity.ERROR;
-import static io.ballerina.tools.diagnostics.DiagnosticSeverity.WARNING;
 
 /**
  * Compilation errors in the Ballerina AI package.
  */
 public enum CompilationDiagnostic {
-    UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION(DiagnosticMessage.ERROR_101, DiagnosticCode.AI_101, WARNING),
+    UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION(DiagnosticMessage.ERROR_101, DiagnosticCode.AI_101, ERROR),
     PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA(DiagnosticMessage.ERROR_102, DiagnosticCode.AI_102, ERROR),
     XML_PARAMETER_NOT_SUPPORTED_BY_TOOL(DiagnosticMessage.ERROR_103, DiagnosticCode.AI_103, ERROR),
     INVALID_RETURN_TYPE_IN_TOOL(DiagnosticMessage.ERROR_104, DiagnosticCode.AI_104, ERROR);

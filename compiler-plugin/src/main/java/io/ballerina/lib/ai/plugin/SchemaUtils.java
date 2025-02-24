@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static io.ballerina.lib.ai.plugin.ToolAnnotationAnalysisTask.EMPTY_STRING;
 import static io.ballerina.lib.ai.plugin.ToolAnnotationAnalysisTask.NIL_EXPRESSION;
 
 /**
@@ -94,7 +95,7 @@ public class SchemaUtils {
         String newLineRegex = "\\R";
         String jsonCompressionRegex = "\\s*([{}\\[\\]:,])\\s*";
         return Json.pretty(schema.getJsonSchema())
-                .replaceAll(newLineRegex, ToolAnnotationAnalysisTask.EMPTY_STRING)
+                .replaceAll(newLineRegex, EMPTY_STRING)
                 .replaceAll(jsonCompressionRegex, "$1");
     }
 
