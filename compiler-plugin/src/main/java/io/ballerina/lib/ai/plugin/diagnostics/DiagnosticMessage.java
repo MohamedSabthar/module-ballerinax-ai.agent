@@ -26,7 +26,8 @@ public enum DiagnosticMessage {
             " Specify the parameter schema manually using the `@ai:Tool` annotation's parameter field."),
     ERROR_102("the function ''{0}'' has a parameter ''{1}'' that is not a subtype of `anydata`." +
             " Only `anydata` types are allowed in a tool."),
-    ERROR_103("the function ''{0}'' has a parameter ''{1}'' of type `xml`, which is not supported by the tool."),
+    ERROR_103("the function ''{0}'' has a parameter ''{1}'' that includes the type xml," +
+            " either as its type or within its fields, which is not supported by the tool."),
     ERROR_104("the return type of the function ''{0}'' is not a subtype of `anydata|error`." +
             " The tool must return a value of type `anydata`.");
 

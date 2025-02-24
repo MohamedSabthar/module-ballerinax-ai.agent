@@ -139,9 +139,10 @@ class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisConte
                         functionName, parameterSymbol.getName().orElse("<unknown>"));
                 reportDiagnostic(diagnostic);
             }
-            if (Utils.isXmlType(paramTypeSymbol, this.context)) {
+            XmlTypeInspector xmlTypeInspector = new XmlTypeInspector(context);
+            if (xmlTypeInspector.includesXmlType(paramTypeSymbol)) {
                 Diagnostic diagnostic = CompilationDiagnostic.getDiagnostic(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL,
-                        paramTypeSymbol.getLocation().orElse(alternativeLocation),
+                        parameterSymbol.getLocation().orElse(alternativeLocation),
                         functionName, parameterSymbol.getName().orElse("<unknown>"));
                 reportDiagnostic(diagnostic);
                 isXml = true;

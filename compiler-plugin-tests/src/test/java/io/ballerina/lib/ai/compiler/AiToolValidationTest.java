@@ -37,6 +37,8 @@ import java.util.Iterator;
 
 import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.INVALID_RETURN_TYPE_IN_TOOL;
 import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA;
+import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION;
+import static io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic.XML_PARAMETER_NOT_SUPPORTED_BY_TOOL;
 
 /**
  * Contains compiler plugin tests for validating the Ballerina AI tool.
@@ -65,6 +67,78 @@ public class AiToolValidationTest {
         assertErrorMessage(diagnostic, message, 24, 64);
     }
 
+    @Test
+    public void testToolReturnTypeValidation() {
+        String packagePath = "02_tool_with_any_return_type";
+        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
+        Assert.assertEquals(diagnosticResult.errorCount(), 4);
+
+        Iterator<Diagnostic> diagnosticIterator = diagnosticResult.errors().iterator();
+        Diagnostic diagnostic = diagnosticIterator.next();
+        String message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningAny");
+        assertErrorMessage(diagnostic, message, 24, 19);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningInstance");
+        assertErrorMessage(diagnostic, message, 29, 19);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningMapOfAny");
+        assertErrorMessage(diagnostic, message, 34, 19);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningUnionOfAny");
+        assertErrorMessage(diagnostic, message, 39, 19);
+    }
+
+    @Test
+    public void testToolXmlInputValidation() {
+        String packagePath = "03_tool_with_xml_input_type";
+        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
+        Assert.assertEquals(diagnosticResult.errorCount(), 7);
+
+        Iterator<Diagnostic> diagnosticIterator = diagnosticResult.errors().iterator();
+        Diagnostic diagnostic = diagnosticIterator.next();
+        String message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "one");
+        assertErrorMessage(diagnostic, message, 26, 35);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "two");
+        assertErrorMessage(diagnostic, message, 26, 44);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "three");
+        assertErrorMessage(diagnostic, message, 26, 58);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "four");
+        assertErrorMessage(diagnostic, message, 26, 77);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "five");
+        assertErrorMessage(diagnostic, message, 27, 16);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "six");
+        assertErrorMessage(diagnostic, message, 27, 36);
+
+        diagnostic = diagnosticIterator.next();
+        message = getErrorMessage(XML_PARAMETER_NOT_SUPPORTED_BY_TOOL, "toolWithXml", "seven");
+        assertErrorMessage(diagnostic, message, 27, 55);
+    }
+
+    @Test
+    public void testToolWithCyclicInputValidation() {
+        String packagePath = "04_tool_with_cyclic_input_type";
+        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
+        Assert.assertEquals(diagnosticResult.errorCount(), 1);
+
+        Iterator<Diagnostic> diagnosticIterator = diagnosticResult.errors().iterator();
+        Diagnostic diagnostic = diagnosticIterator.next();
+        String message = getErrorMessage(UNABLE_TO_GENERATE_SCHEMA_FOR_FUNCTION, "toolCyclicInput");
+        assertErrorMessage(diagnostic, message, 26, 19);
+    }
+
     private DiagnosticResult getDiagnosticResult(String path) {
         Path projectDirPath = RESOURCE_DIRECTORY.resolve(path);
         BuildProject project = BuildProject.load(getEnvironmentBuilder(), projectDirPath);
@@ -90,29 +164,5 @@ public class AiToolValidationTest {
         // Compiler counts lines and columns from zero
         Assert.assertEquals((location.lineRange().startLine().line() + 1), line);
         Assert.assertEquals((location.lineRange().startLine().offset() + 1), column);
-    }
-
-    @Test
-    public void testToolReturnTypeValidation() {
-        String packagePath = "02_tool_with_any_return_type";
-        DiagnosticResult diagnosticResult = getDiagnosticResult(packagePath);
-        Assert.assertEquals(diagnosticResult.errorCount(), 4);
-
-        Iterator<Diagnostic> diagnosticIterator = diagnosticResult.errors().iterator();
-        Diagnostic diagnostic = diagnosticIterator.next();
-        String message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningAny");
-        assertErrorMessage(diagnostic, message, 24, 19);
-
-        diagnostic = diagnosticIterator.next();
-        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningInstance");
-        assertErrorMessage(diagnostic, message, 29, 19);
-
-        diagnostic = diagnosticIterator.next();
-        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningMapOfAny");
-        assertErrorMessage(diagnostic, message, 34, 19);
-
-        diagnostic = diagnosticIterator.next();
-        message = getErrorMessage(INVALID_RETURN_TYPE_IN_TOOL, "toolReturningUnionOfAny");
-        assertErrorMessage(diagnostic, message, 39, 19);
     }
 }

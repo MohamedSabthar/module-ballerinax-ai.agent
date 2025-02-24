@@ -74,8 +74,8 @@ public class Utils {
         return isAnydataType(typeSymbol, context) || isErrorType(typeSymbol, context);
     }
 
-    static boolean isXmlType(TypeSymbol paramTypeSymbol, SyntaxNodeAnalysisContext context) {
-        return paramTypeSymbol.subtypeOf(context.semanticModel().types().XML);
+    public static boolean isXmlType(TypeSymbol typeSymbol, SyntaxNodeAnalysisContext context) {
+        return typeSymbol.subtypeOf(context.semanticModel().types().XML);
     }
 
     public static String getParameterDescription(FunctionSymbol functionSymbol, String parameterName) {
