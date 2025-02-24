@@ -227,3 +227,30 @@ function testExecutionError() {
         test:assertFail("tool execution should failed with erronous generation, yet it is succesfull");
     }
 }
+
+@test:Config {}
+function testToolWithDefaultParameters() returns error? {
+    ToolConfig testToolConfig = {
+        name: "testTool",
+        description: "testTool",
+        parameters: {
+            properties: {
+                a: {'type: STRING},
+                b: {'type: STRING},
+                c: {'type: STRING}
+            },
+            required: ["a"]
+        },
+        caller: testTool
+    };
+    LlmToolResponse testToolInput = {
+        name: "testTool",
+        arguments: {
+            a: "required",
+            c: "override"
+        }
+    };
+    ToolStore toolStore = check new (testToolConfig);
+    ToolOutput output = check toolStore.execute(testToolInput);
+    test:assertEquals(output.value, "required default-one override");
+}

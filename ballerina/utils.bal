@@ -38,3 +38,8 @@ isolated function isMapType(typedesc<anydata> typedescVal) returns boolean = @ja
 isolated function getFunctionName(FunctionTool toolFunction) returns string = @java:Method {
     'class: "io.ballerina.lib.ai.Utils"
 } external;
+
+isolated function getArgsWithDefaultValues(FunctionTool toolFunction, map<anydata> value)
+returns map<anydata> = @java:Method {
+    'class: "io.ballerina.lib.ai.Utils"
+} external;

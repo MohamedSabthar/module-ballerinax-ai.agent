@@ -103,3 +103,7 @@ public client class MockLLM {
         return error("Unexpected prompt to MockLLM");
     }
 }
+
+isolated function testTool(string a, string b = "default-one", string c = "default-two") returns string {
+    return string `${a} ${b} ${c}`;
+}
