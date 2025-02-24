@@ -104,10 +104,6 @@ public class SchemaUtils {
         if (schema == null) {
             return;
         }
-
-        schema.extensions(null);
-        schema.additionalProperties(null);
-
         modifySchema(schema.getItems());
         modifySchema(schema.getNot());
 
@@ -136,5 +132,59 @@ public class SchemaUtils {
             schema.setFormat(null);
             schema.setType(NUMBER);
         }
+        removeUnwantedFields(schema);
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void removeUnwantedFields(Schema schema) {
+        schema.setSpecVersion(null);
+        schema.setSpecVersion(null);
+        schema.setContains(null);
+        schema.set$id(null);
+        schema.set$schema(null);
+        schema.set$anchor(null);
+        schema.setExclusiveMaximumValue(null);
+        schema.setExclusiveMinimumValue(null);
+        schema.setDiscriminator(null);
+        schema.setTitle(null);
+        schema.setMaximum(null);
+        schema.setExclusiveMaximum(null);
+        schema.setMinimum(null);
+        schema.setExclusiveMinimum(null);
+        schema.setMaxLength(null);
+        schema.setMinLength(null);
+        schema.setMaxItems(null);
+        schema.setMinItems(null);
+        schema.setMaxProperties(null);
+        schema.setMinProperties(null);
+        schema.setAdditionalProperties(null);
+        schema.setAdditionalProperties(null);
+        schema.set$ref(null);
+        schema.set$ref(null);
+        schema.setReadOnly(null);
+        schema.setWriteOnly(null);
+        schema.setExample(null);
+        schema.setExample(null);
+        schema.setExternalDocs(null);
+        schema.setDeprecated(null);
+        schema.setPrefixItems(null);
+        schema.setContentEncoding(null);
+        schema.setContentMediaType(null);
+        schema.setContentSchema(null);
+        schema.setPropertyNames(null);
+        schema.setUnevaluatedProperties(null);
+        schema.setMaxContains(null);
+        schema.setMinContains(null);
+        schema.setAdditionalItems(null);
+        schema.setUnevaluatedItems(null);
+        schema.setIf(null);
+        schema.setElse(null);
+        schema.setThen(null);
+        schema.setDependentSchemas(null);
+        schema.setDependentRequired(null);
+        schema.set$comment(null);
+        schema.setExamples(null);
+        schema.setExtensions(null);
+        schema.setConst(null);
     }
 }

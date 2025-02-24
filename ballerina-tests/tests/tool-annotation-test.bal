@@ -24,10 +24,6 @@ import ballerina/file;
 }
 function validateGeneratedSchema(string functionName, ai:FunctionTool tool) returns error? {
     ai:ToolAnnotationConfig generatedConfig = check getToolConfig(tool);
-    string filePath = string `./resources/expected-schemas/${functionName}.json`;
-    if !check file:test(filePath, file:EXISTS) {
-        check io:fileWriteJson(filePath, generatedConfig);
-    }
     ai:ToolAnnotationConfig expectedConfig = check getExpectedToolConfig(functionName);
     test:assertEquals(generatedConfig, expectedConfig);
 }
