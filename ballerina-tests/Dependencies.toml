@@ -72,9 +72,6 @@ dependencies = [
 	{org = "ballerina", name = "os"},
 	{org = "ballerina", name = "time"}
 ]
-modules = [
-	{org = "ballerina", packageName = "file", moduleName = "file"}
-]
 
 [[package]]
 org = "ballerina"
@@ -394,7 +391,6 @@ org = "ballerinax"
 name = "ai_tests"
 version = "0.7.8"
 dependencies = [
-	{org = "ballerina", name = "file"},
 	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
