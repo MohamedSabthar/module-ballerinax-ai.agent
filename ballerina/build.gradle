@@ -30,20 +30,6 @@ def compilerPluginTomlFilePlaceHolder = new File("${project.rootDir}/build-confi
 def ballerinaTomlFile = new File("$project.projectDir/Ballerina.toml")
 def compilerPluginTomlFile = new File("$project.projectDir/CompilerPlugin.toml")
 
-def stripBallerinaExtensionVersion(String extVersion) {
-    if (extVersion.matches(project.ext.timestampedVersionRegex)) {
-        def splitVersion = extVersion.split('-')
-        if (splitVersion.length > 3) {
-            def strippedValues = splitVersion[0..-4]
-            return strippedValues.join('-')
-        } else {
-            return extVersion
-        }
-    } else {
-        return extVersion.replace("${project.ext.snapshotVersion}", "")
-    }
-}
-
 ballerina {
     packageOrganization = packageOrg
     module = packageName

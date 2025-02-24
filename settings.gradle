@@ -37,14 +37,16 @@ rootProject.name = 'ai'
 include ':checkstyle'
 include ':ai-native'
 include ':ai-ballerina'
-include ':ai-compiler-plugin'
 include ':ai-ballerina-tests'
+include ':ai-compiler-plugin'
+include ':ai-compiler-plugin-tests'
 
 project(':checkstyle').projectDir = file("build-config${File.separator}checkstyle")
 project(':ai-native').projectDir = file('native')
 project(':ai-ballerina').projectDir = file('ballerina')
-project(':ai-compiler-plugin').projectDir = file('compiler-plugin')
 project(':ai-ballerina-tests').projectDir = file("ballerina-tests")
+project(':ai-compiler-plugin').projectDir = file('compiler-plugin')
+project(':ai-compiler-plugin-tests').projectDir = file("compiler-plugin-tests")
 
 gradleEnterprise {
     buildScan {

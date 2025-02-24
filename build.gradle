@@ -79,6 +79,7 @@ task build {
     dependsOn(':ai-native:build')
     dependsOn(':ai-ballerina:build')
     dependsOn(':ai-ballerina-tests:test')
+    dependsOn(':ai-compiler-plugin-tests:test')
 }
 
 subprojects {
@@ -87,5 +88,19 @@ subprojects {
         // to prevent the Gradle plugin from failing due to its absence.
         // https://github.com/ballerina-platform/ballerina-library/issues/7628
         ballerinaStdLibs
+    }
+}
+
+def stripBallerinaExtensionVersion(String extVersion) {
+    if (extVersion.matches(project.ext.timestampedVersionRegex)) {
+        def splitVersion = extVersion.split('-')
+        if (splitVersion.length > 3) {
+            def strippedValues = splitVersion[0..-4]
+            return strippedValues.join('-')
+        } else {
+            return extVersion
+        }
+    } else {
+        return extVersion.replace("${project.ext.snapshotVersion}", "")
     }
 }

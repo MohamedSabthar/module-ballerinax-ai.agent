@@ -135,7 +135,7 @@ class ToolAnnotationAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisConte
             if (!Utils.isAnydataType(paramTypeSymbol, this.context)) {
                 isAnydata = false;
                 Diagnostic diagnostic = CompilationDiagnostic.getDiagnostic(PARAMETER_IS_NOT_A_SUBTYPE_OF_ANYDATA,
-                        paramTypeSymbol.getLocation().orElse(alternativeLocation),
+                        parameterSymbol.getLocation().orElse(alternativeLocation),
                         functionName, parameterSymbol.getName().orElse("<unknown>"));
                 reportDiagnostic(diagnostic);
             }
