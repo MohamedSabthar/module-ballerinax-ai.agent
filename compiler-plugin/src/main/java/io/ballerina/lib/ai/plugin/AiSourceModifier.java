@@ -212,7 +212,7 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         addMissingConfigFields(modifiedFields, config);
 
         StringBuilder mappingConstructorBuilder = new StringBuilder(SyntaxKind.OPEN_BRACE_TOKEN.stringValue());
-        for (Map.Entry<String, MappingFieldNode> entry : existingFields.entrySet()) {
+        for (Map.Entry<String, MappingFieldNode> entry : modifiedFields.entrySet()) {
             if (mappingConstructorBuilder.length() > 1) {
                 mappingConstructorBuilder.append(SyntaxKind.COMMA_TOKEN.stringValue());
             }

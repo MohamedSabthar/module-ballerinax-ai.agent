@@ -61,5 +61,9 @@ function getTools() returns map<[string, ai:FunctionTool]> => {
     toolWithTypeAlias: ["toolWithTypeAlias", toolWithTypeAlias],
     toolWithIncludedRecord: ["toolWithIncludedRecord", toolWithIncludedRecord],
     toolWithMultipleParams: ["toolWithMultipleParams", toolWithMultipleParams],
-    toolWithDocumentation: ["toolWithDocumentation", toolWithDocumentation]
+    toolWithDocumentation: ["toolWithDocumentation", toolWithDocumentation],
+    toolWithOverriddenFunctionName: ["toolWithOverriddenFunctionName", toolWithOverriddenFunctionName],
+    toolWithOverriddenDescription: ["toolWithOverriddenDescription", toolWithOverriddenDescription],
+    toolWithOverriddenParameterSchema: ["toolWithOverriddenParameterSchema", toolWithOverriddenParameterSchema],
+    toolWithOverriddenConfig: ["toolWithOverriddenConfig", toolWithOverriddenConfig]
 };

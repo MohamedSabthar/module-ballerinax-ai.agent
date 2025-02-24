@@ -46,21 +46,11 @@ isolated function toolWithStringArray(string[] param) => ();
 @ai:Tool
 isolated function toolWithByteArray(byte[] param) => ();
 
-type User record {|
-    string name;
-    int age;
-|};
-
 @ai:Tool
 isolated function toolWithRecord(User user) => ();
 
 @ai:Tool
 isolated function toolWithTable(table<User> users) => ();
-
-enum Status {
-    ON,
-    OFF
-}
 
 @ai:Tool
 isolated function toolWithEnum(Status staus) => ();
@@ -72,12 +62,8 @@ isolated function toolWithDefaultParam(string param = "default") => ();
 @ai:Tool
 isolated function toolWithUnion(string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User> param) => ();
 
-type Data string|int|float|decimal|boolean|byte|Status|User|json|map<json>|table<User>|();
-
 @ai:Tool
 isolated function toolWithTypeAlias(Data data) => ();
-
-type Person User;
 
 @ai:Tool
 isolated function toolWithIncludedRecord(*Person person) => ();
@@ -91,3 +77,47 @@ isolated function toolWithMultipleParams(int a, string b, decimal c, float d, Us
 # + salary - Second parameter description
 @ai:Tool
 isolated function toolWithDocumentation(Person person, decimal salary) => ();
+
+# Tool descriptoin 
+# + person - First parameter description
+# + salary - Second parameter description
+@ai:Tool {
+    name: "overriddenFunctionName"
+}
+isolated function toolWithOverriddenFunctionName(Person person, decimal salary) => ();
+
+# Tool descriptoin 
+# + person - First parameter description
+# + salary - Second parameter description
+@ai:Tool {
+    description: "overridden description"
+}
+isolated function toolWithOverriddenDescription(Person person, decimal salary) => ();
+
+# Tool descriptoin 
+# + person - First parameter description
+# + salary - Second parameter description
+@ai:Tool {
+    parameters: {
+        properties: {
+            person: {'type: "string"}
+        },
+        required: ["person"]
+    }
+}
+isolated function toolWithOverriddenParameterSchema(Person person, decimal salary) => ();
+
+# Tool descriptoin 
+# + person - First parameter description
+# + salary - Second parameter description
+@ai:Tool {
+    parameters: {
+        properties: {
+            person: {'type: "string"}
+        },
+        required: ["person"]
+    },
+    name: "overriddenName",
+    description: "overridden description"
+}
+isolated function toolWithOverriddenConfig(Person person, decimal salary) => ();
