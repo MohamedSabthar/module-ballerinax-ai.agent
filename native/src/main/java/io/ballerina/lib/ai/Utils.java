@@ -97,4 +97,9 @@ public class Utils {
                 previousPositionalArgs
         );
     }
+
+    public static Object getToolAnnotation(BFunctionPointer functionPointer) {
+        Type type = functionPointer.getType();
+        return null;
+    }
 }

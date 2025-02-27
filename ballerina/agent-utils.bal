@@ -303,4 +303,4 @@ isolated function getObservationString(anydata|error observation) returns string
 #
 # + agent - Agent instance
 # + return - Array of tools registered with the agent
-public isolated function getTools(BaseAgent agent) returns AgentTool[] => agent.toolStore.tools.toArray();
+public isolated function getTools(BaseAgent agent) returns AgentTool[] => agent.toolStore.getTools().toArray();

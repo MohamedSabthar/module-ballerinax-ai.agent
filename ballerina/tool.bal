@@ -37,7 +37,55 @@ public type AgentTool record {|
 |};
 
 public isolated class ToolStore {
-    public final map<AgentTool> & readonly tools;
+    private map<AgentTool> tools;
+    private final FunctionTool[] toolPointers;
+    private boolean toolPointersMapped = false;
+
+    isolated function mapToolPointers() returns error? {
+        ToolConfig[] toolList = [];
+        lock {
+            ToolConfig[] tl = [];
+            // foreach FunctionTool tool in self.toolPointers.clone() {
+                ToolAnnotationConfig? config = getToolAnnotation(self.toolPointers[0]);
+                if config is () {
+                    return error("The function '" + getFunctionName(self.toolPointers[0]) + "' must be annotated with `@agent:Tool`.");
+                }
+                ToolConfig toolConfig = {
+                    name: check config?.name.ensureType(),
+                    description: check config?.description.ensureType(),
+                    parameters: check config?.parameters.ensureType(),
+                    caller: self.toolPointers.clone()[0]
+                };
+                tl.push(toolConfig);
+            // }
+            toolList = tl.clone();
+        }
+        
+        
+        lock {
+            final map<AgentTool & readonly> toolMap = {};
+            check registerTool(toolMap, toolList.clone());
+            foreach var [name, value] in toolMap.entries() {
+                self.tools[name] = value;
+            }
+        }
+        lock {
+            self.toolPointersMapped = true;
+        }
+    }
+
+    public isolated function getTools() returns readonly & map<AgentTool> {
+        boolean toolMapped = false;
+        lock {
+            toolMapped = self.toolPointersMapped;
+        }
+        if !toolMapped {
+            checkpanic self.mapToolPointers();
+        }
+        lock {
+            return self.tools.cloneReadOnly();
+        }
+    }
 
     # Register tools to the agent. 
     # These tools will be by the LLM to perform tasks.
@@ -49,20 +97,12 @@ public isolated class ToolStore {
             return error("Initialization failed.", cause = "No tools provided to the agent.");
         }
         ToolConfig[] toolList = [];
+        (FunctionTool)[] toolPointers = [];
         foreach BaseToolKit|ToolConfig|FunctionTool tool in tools {
             if tool is FunctionTool {
-                typedesc<FunctionTool> typedescriptor = typeof tool;
-                ToolAnnotationConfig? config = typedescriptor.@Tool;
-                if config is () {
-                    return error("The function '" + getFunctionName(tool) + "' must be annotated with `@agent:Tool`.");
+                lock {
+                    toolPointers.push(tool);
                 }
-                ToolConfig toolConfig = {
-                    name: check config?.name.ensureType(),
-                    description: check config?.description.ensureType(),
-                    parameters: check config?.parameters.ensureType(),
-                    caller: tool
-                };
-                toolList.push(toolConfig);
             } else if tool is BaseToolKit {
                 ToolConfig[] toolsFromToolKit = tool.getTools(); // TODO remove this after Ballerina fixes nullpointer exception
                 toolList.push(...toolsFromToolKit);
@@ -70,9 +110,12 @@ public isolated class ToolStore {
                 toolList.push(tool);
             }
         }
-        map<AgentTool & readonly> toolMap = {};
-        check registerTool(toolMap, toolList);
-        self.tools = toolMap.cloneReadOnly();
+        lock {
+            map<AgentTool & readonly> toolMap = {};
+            check registerTool(toolMap, toolList);
+            self.tools = toolMap.clone();
+        }
+        self.toolPointers = toolPointers.clone();
     }
 
     # execute the tool decided by the LLM.
@@ -82,19 +125,19 @@ public isolated class ToolStore {
     isolated function execute(LlmToolResponse action) returns ToolOutput|LlmInvalidGenerationError|ToolExecutionError {
         string name = action.name;
         map<json>? inputs = action.arguments;
-        if !self.tools.hasKey(name) {
+        if !self.getTools().hasKey(name) {
             return error ToolNotFoundError("Cannot find the tool.", toolName = name,
                 instruction = string `Tool "${name}" does not exists.`
-                + string ` Use a tool from the list: ${self.tools.keys().toString()}}`);
+                + string ` Use a tool from the list: ${self.getTools().keys().toString()}}`);
         }
-        map<json>|error inputValues = mergeInputs(inputs, self.tools.get(name).constants);
+        map<json>|error inputValues = mergeInputs(inputs, self.getTools().get(name).constants);
         if inputValues is error {
             string instruction = string `Tool "${name}"  execution failed due to invalid inputs provided.` +
-                string ` Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`;
+                string ` Use the schema to provide inputs: ${self.getTools().get(name).variables.toString()}`;
             return error ToolInvalidInputError("Tool is provided with invalid inputs.", inputValues, toolName = name,
                 inputs = inputs ?: (), instruction = instruction);
         }
-        isolated function caller = self.tools.get(name).caller;
+        isolated function caller = self.getTools().get(name).caller;
         ToolExecutionResult|error execution = trap callFunction(caller, inputValues);
         if execution is error {
             return error ToolExecutionError("Tool execution failed.", execution, toolName = name,
@@ -110,7 +153,7 @@ public isolated class ToolStore {
         }
         if observation.message() == "{ballerina/lang.function}IncompatibleArguments" {
             string instruction = string `Tool "${name}"  execution failed due to invalid inputs provided.`
-                + string ` Use the schema to provide inputs: ${self.tools.get(name).variables.toString()}`;
+                + string ` Use the schema to provide inputs: ${self.getTools().get(name).variables.toString()}`;
             return error ToolInvalidInputError("Tool is provided with invalid inputs.",
                 observation, toolName = name, inputs = inputValues.length() == 0 ? {} : inputValues,
                 instruction = instruction);

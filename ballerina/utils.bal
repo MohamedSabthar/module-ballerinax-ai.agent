@@ -43,3 +43,9 @@ isolated function getArgsWithDefaultValues(FunctionTool toolFunction, map<anydat
 returns map<anydata> = @java:Method {
     'class: "io.ballerina.lib.ai.Utils"
 } external;
+
+isolated function getToolAnnotation(FunctionTool toolFunction)
+returns ToolAnnotationConfig? = @java:Method {
+    'class: "io.ballerina.lib.ai.Utils"
+} external;
+
