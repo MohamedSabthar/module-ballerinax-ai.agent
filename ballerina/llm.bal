@@ -15,9 +15,7 @@
 // under the License.
 
 import ballerinax/azure.openai.chat as azure_chat;
-import ballerinax/azure.openai.text as azure_text;
 import ballerinax/openai.chat;
-import ballerinax/openai.text;
 
 // TODO: change the configs to extend the config record from the respective clients.
 // requirs using never prompt?; never stop? to prevent setting those during initialization
@@ -30,16 +28,6 @@ public enum ROLE {
     ASSISTANT = "assistant",
     FUNCTION = "function"
 }
-
-# Completion model configurations.
-public type CompletionModelConfig readonly & record {|
-    # Model type to be used for the completion. Default is `davinci`.
-    string model = GPT3_MODEL_NAME;
-    # Temperature value to be used for the completion. Default is `0.7`.
-    decimal temperature = DEFAULT_TEMPERATURE;
-    # Maximum number of tokens to be generated for the completion. Default is `512`.
-    int max_tokens = DEFAULT_MAX_TOKEN_COUNT;
-|};
 
 # Chat model configurations.
 public type ChatModelConfig readonly & record {|
@@ -120,12 +108,6 @@ public type FunctionCall record {|
 public type LlmModel distinct isolated client object {
 };
 
-# Extendable LLM model object for completion models.
-public type CompletionLlmModel distinct isolated client object {
-    *LlmModel;
-    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError;
-};
-
 # Extendable LLM model object for chat LLM models
 public type ChatLlmModel distinct isolated client object {
     *LlmModel;
@@ -137,80 +119,6 @@ public type FunctionCallLlmModel distinct isolated client object {
     *LlmModel;
     public isolated function functionCall(ChatMessage[] messages, ChatCompletionFunctions[] functions, string? stop = ()) returns string|FunctionCall|LlmError;
 };
-
-public isolated client class Gpt3Model {
-    *CompletionLlmModel;
-    final text:Client llmClient;
-    public final CompletionModelConfig modelConfig;
-
-    # Initializes the GPT-3 model with the given connection configuration and model configuration.
-    #
-    # + connectionConfig - Connection Configuration for OpenAI text client 
-    # + modelConfig - Model Configuration for OpenAI text client
-    # + return - Error if the model initialization fails
-    public isolated function init(text:ConnectionConfig connectionConfig, CompletionModelConfig modelConfig = {}) returns error? {
-        self.llmClient = check new (connectionConfig);
-        self.modelConfig = modelConfig;
-    }
-
-    # Completes the given prompt using the GPT3 model.
-    #
-    # + prompt - Prompt to be completed
-    # + stop - Stop sequence to stop the completion
-    # + return - Completed prompt or error if the completion fails
-    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError {
-        text:CreateCompletionResponse|error response = self.llmClient->/completions.post({
-            ...self.modelConfig,
-            stop,
-            prompt
-        });
-        if response is error {
-            return error LlmConnectionError("Error while connecting to the model", response);
-        }
-        return response.choices[0].text ?: error LlmInvalidResponseError("Empty response from the model");
-    }
-}
-
-public isolated client class AzureGpt3Model {
-    *CompletionLlmModel;
-    final azure_text:Client llmClient;
-    public final CompletionModelConfig modelConfig;
-    private final string deploymentId;
-    private final string apiVersion;
-
-    # Initializes the GPT-3 model with the given connection configuration and model configuration.
-    #
-    # + connectionConfig - Connection Configuration for Azure OpenAI text client
-    # + serviceUrl - Service URL for Azure OpenAI service
-    # + deploymentId - Deployment ID for Azure OpenAI model instance
-    # + apiVersion - API version for Azure OpenAI model instance
-    # + modelConfig - Model Configuration for Azure OpenAI text client
-    # + return - Error if the model initialization fails
-    public isolated function init(azure_text:ConnectionConfig connectionConfig, string serviceUrl, string deploymentId,
-            string apiVersion, CompletionModelConfig modelConfig = {}) returns error? {
-        self.llmClient = check new (connectionConfig, serviceUrl);
-        self.modelConfig = modelConfig;
-        self.deploymentId = deploymentId;
-        self.apiVersion = apiVersion;
-    }
-
-    # Completes the given prompt using the GPT3 model.
-    #
-    # + prompt - Prompt to be completed
-    # + stop - Stop sequence to stop the completion
-    # + return - Completed prompt or error if the completion fails
-    public isolated function complete(string prompt, string? stop = ()) returns string|LlmError {
-        azure_text:Inline_response_200|error response = self.llmClient->/deployments/[self.deploymentId]/completions.post(self.apiVersion, {
-            ...self.modelConfig,
-            stop,
-            prompt
-        });
-        if response is error {
-            return error LlmConnectionError("Error while connecting to the model", response);
-        }
-        return response.choices[0].text ?: error LlmInvalidResponseError("Empty response from the model");
-    }
-}
 
 public isolated client class ChatGptModel {
     *FunctionCallLlmModel;

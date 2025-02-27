@@ -64,10 +64,12 @@ isolated function mutiply(int a, int b) returns string {
     return string `Answer is: ${a * b}`;
 }
 
-isolated client class MockLlm {
-    *agent:CompletionLlmModel;
+isolated client distinct class MockLlm {
+    *agent:Model;
 
-    public isolated function complete(string prompt, string? stop) returns string|agent:LlmError {
+    public isolated function chatComplete(agent:ChatMessage[] messages, string? stop) returns string|agent:LlmError {
+        agent:ChatMessage lastMessage = messages.pop();
+        string prompt = lastMessage is agent:ChatUserMessage ? lastMessage.content : "";
         string query = re `Begin!`.split(prompt)[1];
         if (query.includes("Answer is:")) {
             MockLlmToolCall toolCall = {action: "Final answer", action_input: getAnswer(query)};
@@ -86,5 +88,10 @@ isolated client class MockLlm {
             return string `I need to call the sum tool. Action: ${toolCall.toJsonString()}`;
         }
         return "I can't understand";
+    }
+
+    public isolated function functionCall(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] functions, string? stop = ())
+        returns string|agent:FunctionCall|agent:LlmError {
+        return "";
     }
 }

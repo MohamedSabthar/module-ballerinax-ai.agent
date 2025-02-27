@@ -47,8 +47,10 @@ isolated function sendMail(record {|string senderEmail; MessageRequest messageRe
 }
 
 public client class MockLLM {
-    CompletionModelConfig modelConfig = {};
-    public isolated function complete(string prompt, string? stop = ()) returns string|error {
+    ChatModelConfig modelConfig = {};
+    public isolated function chatComplete(ChatMessage[] messages, string? stop) returns string|LlmError {
+        ChatMessage lastMessage = messages.pop();
+        string prompt = lastMessage is ChatUserMessage ? lastMessage.content : "";
         if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {
             int queryLevel = regexp:findAll(re `observation`, prompt.toLowerAscii()).length();
             io:println(queryLevel, prompt);

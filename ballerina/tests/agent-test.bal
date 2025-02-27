@@ -30,7 +30,7 @@ ToolConfig calculatorTool = {
     caller: calculatorToolMock
 };
 
-Gpt3Model model = test:mock(Gpt3Model, new MockLLM());
+ChatGptModel model = test:mock(ChatGptModel, new MockLLM());
 
 @test:Config {}
 function testReActAgentInitialization() {
