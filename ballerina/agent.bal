@@ -75,7 +75,5 @@ You are an AI agent with the following responsibility: ${systemPrompt.role}
 Please follow these instructions:
 ${systemPrompt.instructions}
 
-${otherDetails}
-
-Respond with clarity, relevance, and in a helpful manner.`;
+${otherDetails}`;
 }
