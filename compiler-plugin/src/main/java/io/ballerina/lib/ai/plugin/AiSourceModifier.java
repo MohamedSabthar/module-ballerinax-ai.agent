@@ -25,6 +25,7 @@ import io.ballerina.compiler.syntax.tree.MappingFieldNode;
 import io.ballerina.compiler.syntax.tree.MetadataNode;
 import io.ballerina.compiler.syntax.tree.ModuleMemberDeclarationNode;
 import io.ballerina.compiler.syntax.tree.ModulePartNode;
+import io.ballerina.compiler.syntax.tree.ModuleVariableDeclarationNode;
 import io.ballerina.compiler.syntax.tree.Node;
 import io.ballerina.compiler.syntax.tree.NodeFactory;
 import io.ballerina.compiler.syntax.tree.NodeList;
@@ -41,18 +42,23 @@ import io.ballerina.projects.plugins.SourceModifierContext;
 import io.ballerina.tools.text.TextDocument;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_BRACE_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.COLON_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.COMMA_TOKEN;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.EQUAL_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.FUNCTION_DEFINITION;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.MODULE_VAR_DECL;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.OPEN_BRACE_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.QUALIFIED_NAME_REFERENCE;
+import static io.ballerina.compiler.syntax.tree.SyntaxKind.SEMICOLON_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.SPECIFIC_FIELD;
 import static io.ballerina.lib.ai.plugin.ToolAnnotationConfig.DESCRIPTION_FIELD_NAME;
 import static io.ballerina.lib.ai.plugin.ToolAnnotationConfig.NAME_FIELD_NAME;
@@ -62,10 +68,14 @@ import static io.ballerina.lib.ai.plugin.ToolAnnotationConfig.PARAMETERS_FIELD_N
  * Modifies the AI tool annotations with the generated tool configuration.
  */
 class AiSourceModifier implements ModifierTask<SourceModifierContext> {
+    private static final String EMPTY_STRING = "";
     private final Map<DocumentId, ModifierContext> modifierContextMap;
+    private final boolean hasInitMethod;
+    private boolean initMethodModified = false;
 
-    AiSourceModifier(Map<DocumentId, ModifierContext> modifierContextMap) {
+    AiSourceModifier(Map<DocumentId, ModifierContext> modifierContextMap, AtomicBoolean hasInitMethod) {
         this.modifierContextMap = modifierContextMap;
+        this.hasInitMethod = hasInitMethod.get();
     }
 
     @Override
@@ -92,11 +102,27 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     private List<ModuleMemberDeclarationNode> getModifiedModuleMembers(NodeList<ModuleMemberDeclarationNode> members,
                                                                        ModifierContext modifierContext) {
         Map<AnnotationNode, AnnotationNode> modifiedAnnotations = getModifiedAnnotations(modifierContext);
+        Set<ModuleVariableDeclarationNode> agentDeclarations = modifierContext.getModuleLevelAgentDeclarations();
         List<ModuleMemberDeclarationNode> modifiedMembers = new ArrayList<>();
         for (ModuleMemberDeclarationNode member : members) {
-            modifiedMembers.add(getModifiedModuleMember(member, modifiedAnnotations));
+            modifiedMembers.add(getModifiedModuleMember(member, modifiedAnnotations, agentDeclarations));
+        }
+        if (!hasInitMethod && !initMethodModified) {
+            ModuleMemberDeclarationNode init = createInitMethodNode();
+            initMethodModified = true;
+            modifiedMembers.add(init);
         }
         return modifiedMembers;
+    }
+
+    private ModuleMemberDeclarationNode createInitMethodNode() {
+        List<ModuleVariableDeclarationNode> agentDeclarations = this.modifierContextMap.values().stream()
+                .map(ModifierContext::getModuleLevelAgentDeclarations).flatMap(Collection::stream).toList();
+        String agentInitializationSourceCode = agentDeclarations.stream().map(Node::toSourceCode)
+                .map(code -> code.replaceFirst(".*Agent", EMPTY_STRING))
+                .collect(Collectors.joining(EMPTY_STRING));
+        return NodeParser.parseModuleMemberDeclaration("function init() returns error? {"
+                + agentInitializationSourceCode + "}");
     }
 
     /**
@@ -140,7 +166,7 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         Node annotationReference = targetNode.annotReference();
         if (annotationReference.kind() == QUALIFIED_NAME_REFERENCE) {
             QualifiedNameReferenceNode qualifiedNameReferenceNode = (QualifiedNameReferenceNode) annotationReference;
-            String identifier = qualifiedNameReferenceNode.identifier().text().replaceAll("\\R", "");
+            String identifier = qualifiedNameReferenceNode.identifier().text().replaceAll("\\R", EMPTY_STRING);
             String modulePrefix = qualifiedNameReferenceNode.modulePrefix().text();
             annotationReference = NodeFactory.createQualifiedNameReferenceNode(
                     NodeFactory.createIdentifierToken(modulePrefix),
@@ -236,12 +262,28 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
         return missingFields;
     }
 
-    private ModuleMemberDeclarationNode getModifiedModuleMember(
-            ModuleMemberDeclarationNode member, Map<AnnotationNode, AnnotationNode> modifiedAnnotations) {
-        if (member.kind() != FUNCTION_DEFINITION) {
+    private ModuleMemberDeclarationNode getModifiedModuleMember(ModuleMemberDeclarationNode member,
+            Map<AnnotationNode, AnnotationNode> modifiedAnnotations,
+            Set<ModuleVariableDeclarationNode> agentDeclarations) {
+        if (member.kind() == FUNCTION_DEFINITION) {
+            return modifyFunction((FunctionDefinitionNode) member, modifiedAnnotations);
+        }
+        if (member.kind() == MODULE_VAR_DECL) {
+            return modifyVariableDeclaration((ModuleVariableDeclarationNode) member, agentDeclarations);
+        }
+        return member;
+    }
+
+    private ModuleMemberDeclarationNode modifyVariableDeclaration(
+            ModuleVariableDeclarationNode member, Set<ModuleVariableDeclarationNode> agentDeclarations) {
+        if (!agentDeclarations.contains(member)) {
             return member;
         }
-        return modifyFunction((FunctionDefinitionNode) member, modifiedAnnotations);
+        String sourceCode = member.toSourceCode();
+        int numberOfNewLines = sourceCode.length() - sourceCode.replaceAll("\\R", EMPTY_STRING).length();
+        String modifiedSource = sourceCode.split(EQUAL_TOKEN.stringValue())[0].trim() + SEMICOLON_TOKEN.stringValue()
+                + System.lineSeparator().repeat(numberOfNewLines);
+        return NodeParser.parseModuleMemberDeclaration(modifiedSource);
     }
 
     private FunctionDefinitionNode modifyFunction(FunctionDefinitionNode functionNode,
