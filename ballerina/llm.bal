@@ -121,8 +121,7 @@ public type FunctionCallLlmModel distinct isolated client object {
 };
 
 public isolated client class ChatGptModel {
-    *FunctionCallLlmModel;
-    *ChatLlmModel;
+    *Model;
     final chat:Client llmClient;
     public final ChatModelConfig modelConfig;
 
@@ -189,8 +188,7 @@ public isolated client class ChatGptModel {
 }
 
 public isolated client class AzureChatGptModel {
-    *FunctionCallLlmModel;
-    *ChatLlmModel;
+    *Model;
     final azure_chat:Client llmClient;
     public final ChatModelConfig modelConfig;
     private final string deploymentId;
