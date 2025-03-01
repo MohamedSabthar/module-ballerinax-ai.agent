@@ -32,6 +32,7 @@ public type AgentConfiguration record {|
     AgentType agentType = FUNCTION_CALL_AGENT;
     int maxIter = 5;
     boolean verbose = false;
+    Memory memory = new MessageWindowChatMemory(10);
 |};
 
 public type Model distinct isolated client object {
@@ -45,12 +46,13 @@ public isolated distinct client class Agent {
     private final readonly & SystemPrompt systemPrompt;
     private final boolean verbose;
 
+
     public isolated function init(*AgentConfiguration config) returns error? {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
         self.systemPrompt = config.systemPrompt.cloneReadOnly();
-        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools)
-            : check new FunctionCallAgent(config.model, config.tools);
+        self.agent = config.agentType is REACT_AGENT ? check new ReActAgent(config.model, config.tools, config.memory)
+            : check new FunctionCallAgent(config.model, config.tools, config.memory);
     }
 
     isolated remote function run(string query) returns string|error {

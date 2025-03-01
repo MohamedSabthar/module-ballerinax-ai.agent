@@ -73,6 +73,7 @@ public type ToolOutput record {|
 public type BaseAgent distinct isolated client object {
     public LlmModel model;
     public ToolStore toolStore;
+    public Memory memory;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -86,7 +87,7 @@ public type BaseAgent distinct isolated client object {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError;
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
 };
 
 # An iterator to iterate over agent's execution
@@ -226,11 +227,19 @@ public class Executor {
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose, Memory memory) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];
     string? content = ();
     Iterator iterator = new (agent, query = query, context = context);
     int iter = 0;
+    
+    ChatUserMessage usermsg = {
+        role: "user",
+        content: query
+    };
+
+    _ = check memory.update(usermsg);
+
     foreach ExecutionResult|LlmChatResponse|ExecutionError|error step in iterator {
         if iter == maxIter {
             break;
@@ -245,6 +254,14 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
             if verbose {
                 io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
             }
+            
+            ChatAssistantMessage asstsmg = {
+                role: "assistant",
+                content: step.content
+            };
+
+            _ = check memory.update(asstsmg);
+
             break;
         }
         iter += 1;
@@ -257,6 +274,7 @@ ${BACKTICKS}
 {
     ${ACTION_NAME_KEY}: ${tool.name},
     ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}
+
 }
 ${BACKTICKS}`);
                 anydata|error observation = step?.observation;
@@ -265,6 +283,20 @@ ${BACKTICKS}`);
                 } else if observation !is () {
                     io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
                 }
+                
+                ChatAssistantMessage asstsmg = {
+                    role: "assistant",
+                    function_call: {name: tool.name, arguments: tool.arguments is map<json> ? string `The arguments for the tool are ${tool.arguments.toString()}` : "None"}
+                };
+                _ = check memory.update(asstsmg);
+
+                ChatFunctionMessage funcmsg = {
+                    role: "function",
+                    name: tool.name,
+                    content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()
+                };
+                _ = check memory.update(funcmsg);
+
             } else {
                 error? cause = step.'error.cause();
                 io:println(string `LLM Generation Error: 
@@ -277,6 +309,7 @@ ${BACKTICKS}
 ${BACKTICKS}`);
             }
         }
+
         steps.push(step);
     }
     return {steps, answer: content};

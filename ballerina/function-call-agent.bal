@@ -23,13 +23,16 @@ public isolated distinct client class FunctionCallAgent {
     # LLM model instance (should be a function call model)
     public final FunctionCallLlmModel model;
 
+    public final Memory memory;
+
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -76,8 +79,8 @@ public isolated distinct client class FunctionCallAgent {
         });
     }
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose);
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose, memory);
     }
 }
 

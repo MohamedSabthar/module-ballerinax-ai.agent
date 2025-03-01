@@ -31,13 +31,16 @@ public isolated client class ReActAgent {
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
     public final ChatLlmModel model;
 
+    public final Memory memory;
+
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
+    public isolated function init(ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
@@ -72,8 +75,8 @@ ${THOUGHT_KEY}`;
         return self.model.chatComplete([{role: USER,content: prompt}], stop = OBSERVATION_KEY);
     }
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose);
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+        return run(self, query, maxIter, context, verbose, memory);
     }
 }
 
