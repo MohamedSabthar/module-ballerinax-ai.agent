@@ -27,7 +27,7 @@ public isolated distinct client class FunctionCallAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }
@@ -100,7 +100,7 @@ isolated function createFunctionCallMessages(ExecutionProgress progress) returns
     foreach ExecutionStep step in progress.history {
         FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
         if functionCall is error {
-            panic error("Badly formated history for function call agent", llmResponse = step.llmResponse);
+            panic error Error("Badly formated history for function call agent", llmResponse = step.llmResponse);
         }
 
         messages.push({

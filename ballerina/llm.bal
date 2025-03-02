@@ -130,8 +130,12 @@ public isolated client class ChatGptModel {
     # + connectionConfig - Connection Configuration for OpenAI chat client
     # + modelConfig - Model Configuration for OpenAI chat client
     # + return - Error if the model initialization fails
-    public isolated function init(chat:ConnectionConfig connectionConfig, ChatModelConfig modelConfig = {}) returns error? {
-        self.llmClient = check new (connectionConfig);
+    public isolated function init(chat:ConnectionConfig connectionConfig, ChatModelConfig modelConfig = {}) returns Error? {
+        chat:Client|error llmClient = new (connectionConfig);
+        if llmClient is error {
+            return error Error("Failed to initialize ChatGptModel", llmClient);
+        }
+        self.llmClient = llmClient;
         self.modelConfig = modelConfig;
     }
 
@@ -203,8 +207,12 @@ public isolated client class AzureChatGptModel {
     # + modelConfig - Model Configuration for OpenAI chat client
     # + return - Error if the model initialization fails
     public isolated function init(azure_chat:ConnectionConfig connectionConfig, string serviceUrl, string deploymentId,
-            string apiVersion, ChatModelConfig modelConfig = {}) returns error? {
-        self.llmClient = check new (connectionConfig, serviceUrl);
+            string apiVersion, ChatModelConfig modelConfig = {}) returns Error? {
+        azure_chat:Client|error llmClient =  new (connectionConfig, serviceUrl);
+        if llmClient is error {
+            return error Error("Failed to initialize AzureChatGptModel", llmClient);
+        }
+        self.llmClient = llmClient;
         self.modelConfig = modelConfig;
         self.deploymentId = deploymentId;
         self.apiVersion = apiVersion;

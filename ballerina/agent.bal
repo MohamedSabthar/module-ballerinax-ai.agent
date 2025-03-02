@@ -45,7 +45,7 @@ public isolated distinct client class Agent {
     private final readonly & SystemPrompt systemPrompt;
     private final boolean verbose;
 
-    public isolated function init(*AgentConfiguration config) returns error? {
+    public isolated function init(*AgentConfiguration config) returns Error? {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
         self.systemPrompt = config.systemPrompt.cloneReadOnly();
@@ -53,7 +53,7 @@ public isolated distinct client class Agent {
             : check new FunctionCallAgent(config.model, config.tools);
     }
 
-    isolated remote function run(string query) returns string|error {
+    isolated remote function run(string query) returns string|Error {
         var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose);
         return result.answer ?: "";
     }

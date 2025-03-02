@@ -34,8 +34,8 @@ ChatGptModel model = test:mock(ChatGptModel, new MockLLM());
 
 @test:Config {}
 function testReActAgentInitialization() {
-    ReActAgent|error agent = new (model, [searchTool, calculatorTool]);
-    if agent is error {
+    ReActAgent|Error agent = new (model, [searchTool, calculatorTool]);
+    if agent is Error {
         test:assertFail("Agent creation is unsuccessful");
     }
 
@@ -99,12 +99,12 @@ function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
     Executor agentExecutor = new (agent, query = query);
-    record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}? result = agentExecutor.next();
+    record {|ExecutionResult|LlmChatResponse|ExecutionError|Error value;|}? result = agentExecutor.next();
     if result is () {
         test:assertFail("AgentExecutor.next returns an null during first iteration");
     }
-    ExecutionResult|LlmChatResponse|ExecutionError|error output = result.value;
-    if output is error {
+    ExecutionResult|LlmChatResponse|ExecutionError|Error output = result.value;
+    if output is Error {
         test:assertFail("AgentExecutor.next returns an error during first iteration");
     }
     test:assertEquals(output?.observation, "Camila Morrone");
@@ -114,7 +114,7 @@ function testAgentExecutorRun() returns error? {
         test:assertFail("AgentExecutor.next returns an null during second iteration");
     }
     output = result.value;
-    if output is error {
+    if output is Error {
         test:assertFail("AgentExecutor.next returns an error during second iteration");
     }
     test:assertEquals(output?.observation, "25 years");
@@ -124,7 +124,7 @@ function testAgentExecutorRun() returns error? {
         test:assertFail("AgentExecutor.next returns an null during third iteration");
     }
     output = result.value;
-    if output is error {
+    if output is Error {
         test:assertFail("AgentExecutor.next returns an error during third iteration");
     }
     test:assertEquals(output?.observation, "Answer: 3.991298452658078");

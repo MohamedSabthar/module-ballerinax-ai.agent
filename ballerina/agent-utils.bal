@@ -106,7 +106,7 @@ public class Iterator {
     # Iterate over the agent's execution steps.
     # + return - a record with the execution step or an error if the agent failed
     public function iterator() returns object {
-        public function next() returns record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}?;
+        public function next() returns record {|ExecutionResult|LlmChatResponse|ExecutionError|Error value;|}?;
     } {
         return self.executor;
     }
@@ -206,7 +206,7 @@ public class Executor {
     # Reason and execute the next step of the agent.
     #
     # + return - A record with ExecutionResult, chat response or an error 
-    public isolated function next() returns record {|ExecutionResult|LlmChatResponse|ExecutionError|error value;|}? {
+    public isolated function next() returns record {|ExecutionResult|LlmChatResponse|ExecutionError|Error value;|}? {
         if self.isCompleted {
             return ();
         }
@@ -231,11 +231,11 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
     string? content = ();
     Iterator iterator = new (agent, query = query, context = context);
     int iter = 0;
-    foreach ExecutionResult|LlmChatResponse|ExecutionError|error step in iterator {
+    foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
         if iter == maxIter {
             break;
         }
-        if step is error {
+        if step is Error {
             error? cause = step.cause();
             log:printError("Error occured while executing the agent", step, cause = cause !is () ? cause.toString() : "");
             break;
