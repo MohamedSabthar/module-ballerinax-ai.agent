@@ -29,13 +29,13 @@ public isolated client class ReActAgent {
     # ToolStore instance to store the tools used by the agent
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final ChatLlmModel model;
+    public final Model model;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
@@ -69,7 +69,8 @@ ${THOUGHT_KEY}`;
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response
     isolated function generate(string prompt) returns string|LlmError {
-        return self.model.chatComplete([{role: USER,content: prompt}], stop = OBSERVATION_KEY);
+        string|FunctionCall response = check self.model.chat([{role: USER,content: prompt}], stop = OBSERVATION_KEY);
+        return response is string ? response : response.toJsonString();
     }
 
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {

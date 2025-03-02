@@ -21,13 +21,13 @@ public isolated distinct client class FunctionCallAgent {
     # Tool store to be used by the agent
     public final ToolStore toolStore;
     # LLM model instance (should be a function call model)
-    public final FunctionCallLlmModel model;
+    public final Model model;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
     }
@@ -67,7 +67,7 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        return self.model.functionCall(messages,
+        return self.model.chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,

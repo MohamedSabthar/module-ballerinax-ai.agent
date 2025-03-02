@@ -48,7 +48,8 @@ isolated function sendMail(record {|string senderEmail; MessageRequest messageRe
 
 public client class MockLLM {
     ChatModelConfig modelConfig = {};
-    public isolated function chatComplete(ChatMessage[] messages, string? stop) returns string|LlmError {
+    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop) 
+        returns string|FunctionCall|LlmError {
         ChatMessage lastMessage = messages.pop();
         string prompt = lastMessage is ChatUserMessage ? lastMessage.content : "";
         if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {

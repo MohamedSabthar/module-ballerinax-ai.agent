@@ -71,7 +71,7 @@ public type ToolOutput record {|
 |};
 
 public type BaseAgent distinct isolated client object {
-    public LlmModel model;
+    public Model model;
     public ToolStore toolStore;
 
     # Parse the llm response and extract the tool to be executed.

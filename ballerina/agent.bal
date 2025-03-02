@@ -34,11 +34,6 @@ public type AgentConfiguration record {|
     boolean verbose = false;
 |};
 
-public type Model distinct isolated client object {
-    *ChatLlmModel;
-    *FunctionCallLlmModel;
-};
-
 public isolated distinct client class Agent {
     private final BaseAgent agent;
     private final int maxIter;
