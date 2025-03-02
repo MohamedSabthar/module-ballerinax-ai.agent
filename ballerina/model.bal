@@ -65,7 +65,7 @@ public type ChatAssistantMessage record {|
     ASSISTANT role;
     # The contents of the assistant message
     # Required unless `tool_calls` or `function_call` is specified
-    string? content?;
+    string? content = ();
     # An optional name for the participant
     # Provides the model information to differentiate between participants of the same role
     string name?;
@@ -106,7 +106,7 @@ public type FunctionCall record {|
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
     public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ()) 
-        returns string|FunctionCall|LlmError;
+        returns ChatAssistantMessage|LlmError;
 };
 
 public isolated client class ChatGptModel {
@@ -135,7 +135,7 @@ public isolated client class ChatGptModel {
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
     public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) 
-        returns string|FunctionCall|LlmError {
+        returns ChatAssistantMessage|LlmError {
         chat:CreateChatCompletionRequest request = {...self.modelConfig, stop, messages };
         if tools.length() > 0 {
             request.functions = tools;
@@ -147,14 +147,11 @@ public isolated client class ChatGptModel {
         chat:ChatCompletionResponseMessage? message = response.choices[0].message;
         string? content = message?.content;
         if content is string {
-            return content;
+            return {role: ASSISTANT, content};
         }
         chat:ChatCompletionRequestAssistantMessage_function_call? function_call = message?.function_call;
         if function_call is chat:ChatCompletionRequestAssistantMessage_function_call {
-            return {
-                name: function_call.name,
-                arguments: function_call.arguments
-            };
+            return {role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}};
         }
         return error LlmInvalidResponseError("Empty response from the model when using function call API");
     }
@@ -193,7 +190,7 @@ public isolated client class AzureChatGptModel {
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns string|FunctionCall|LlmError {
+    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
         azure_chat:CreateChatCompletionRequest request = {...self.modelConfig, stop, messages };
         if tools.length() > 0 {
             request.functions = tools;
@@ -215,16 +212,13 @@ public isolated client class AzureChatGptModel {
             // check whether the model response is text
             string? content = choices[0].message?.content;
             if content is string {
-                return content;
+                return {role: ASSISTANT, content};
             }
 
             // check whether the model response is a function call
             azure_chat:ChatCompletionFunctionCall? function_call = choices[0].message?.function_call;
             if function_call is azure_chat:ChatCompletionFunctionCall {
-                return {
-                name: function_call.name,
-                arguments: function_call.arguments
-            };
+                return {role: ASSISTANT, function_call: {name: function_call.name, arguments: function_call.arguments}};
             }
         }
         return error LlmInvalidResponseError("Empty response from the model when using function call API");

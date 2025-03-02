@@ -162,7 +162,7 @@ public class Executor {
         ExecutionResult|ExecutionError executionResult;
         if parseLlmResponse is LlmToolResponse {
             ToolOutput|ToolExecutionError|LlmInvalidGenerationError output = self.agent.toolStore.execute(parseLlmResponse);
-            if output is error {
+            if output is Error {
                 if output is ToolNotFoundError {
                     observation = "Tool is not found. Please check the tool name and retry.";
                 } else if output is ToolInvalidInputError {
