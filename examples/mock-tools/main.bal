@@ -78,7 +78,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         caller: calculatorToolMock
     };
 
-    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
+    agent:OpenAiModel model = check new ({auth: {token: openAIToken}});
     agent:FunctionCallAgent agent = check new (model, searchTool, calculatorTool);
     _ = agent:run(agent, query);
 }

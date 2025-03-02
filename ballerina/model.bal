@@ -109,7 +109,7 @@ public type Model distinct isolated client object {
         returns ChatAssistantMessage|LlmError;
 };
 
-public isolated client class ChatGptModel {
+public isolated client class OpenAiModel {
     *Model;
     final chat:Client llmClient;
     public final ChatModelConfig modelConfig;
@@ -122,7 +122,7 @@ public isolated client class ChatGptModel {
     public isolated function init(chat:ConnectionConfig connectionConfig, ChatModelConfig modelConfig = {}) returns Error? {
         chat:Client|error llmClient = new (connectionConfig);
         if llmClient is error {
-            return error Error("Failed to initialize ChatGptModel", llmClient);
+            return error Error("Failed to initialize OpenAiModel", llmClient);
         }
         self.llmClient = llmClient;
         self.modelConfig = modelConfig;
@@ -157,7 +157,7 @@ public isolated client class ChatGptModel {
     }
 }
 
-public isolated client class AzureChatGptModel {
+public isolated client class AzureOpenAiModel {
     *Model;
     final azure_chat:Client llmClient;
     public final ChatModelConfig modelConfig;
@@ -176,7 +176,7 @@ public isolated client class AzureChatGptModel {
             string apiVersion, ChatModelConfig modelConfig = {}) returns Error? {
         azure_chat:Client|error llmClient =  new (connectionConfig, serviceUrl);
         if llmClient is error {
-            return error Error("Failed to initialize AzureChatGptModel", llmClient);
+            return error Error("Failed to initialize AzureOpenAiModel", llmClient);
         }
         self.llmClient = llmClient;
         self.modelConfig = modelConfig;

@@ -96,7 +96,7 @@ public function main(string query = DEFAULT_QUERY) returns error? {
         }
     });
 
-    agent:ChatGptModel model = check new ({auth: {token: openAIToken}});
+    agent:OpenAiModel model = check new ({auth: {token: openAIToken}});
     agent:FunctionCallAgent agent = check new (model, wifiApiToolKit, sendEmailTool);
 
     // Execute the query using agent iterator
