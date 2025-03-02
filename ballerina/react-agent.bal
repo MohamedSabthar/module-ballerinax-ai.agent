@@ -73,7 +73,14 @@ ${THOUGHT_KEY}`;
         return response is string ? response : response.toJsonString();
     }
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+    # Execute the agent for a given user's query.
+    #
+    # + query - Natural langauge commands to the agent  
+    # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
+    # + context - Context values to be used by the agent to execute the task
+    # + verbose - If true, then print the reasoning steps (default: true)
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) 
+        returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
         return run(self, query, maxIter, context, verbose);
     }
 }

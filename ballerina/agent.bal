@@ -14,32 +14,49 @@
 // specific language governing permissions and limitations
 // under the License.
 
+# Represents the system prompt given to the agent.
 public type SystemPrompt record {|
+    # The role or responsibility assigned to the agent.
     string role;
+    # Specific instructions for the agent.
     string instructions;
     string...;
 |};
 
+# Represents the different types of agents supported by the module.
 public enum AgentType {
+    # Represents a ReAct agent.
     REACT_AGENT,
+    # Represents a function call agent.
     FUNCTION_CALL_AGENT
 }
 
+# Provides a set of configurations for the agent.
 public type AgentConfiguration record {|
+    # The system prompt assigned to the agent.
     SystemPrompt systemPrompt;
+    # The model used by the agent.
     Model model;
+    # The tools available for the agent.
     (BaseToolKit|ToolConfig|FunctionTool)[] tools = [];
+    # Type of the agent
     AgentType agentType = FUNCTION_CALL_AGENT;
+    # The maximum number of iterations the agent performs to complete the task.
     int maxIter = 5;
+    # Specifies whether verbose logging is enabled.
     boolean verbose = false;
 |};
 
+# Represents an agent.
 public isolated distinct client class Agent {
     private final BaseAgent agent;
     private final int maxIter;
     private final readonly & SystemPrompt systemPrompt;
     private final boolean verbose;
 
+    # Initialize an Agent.
+    #
+    # + config - Configuration used to initialize an agent
     public isolated function init(*AgentConfiguration config) returns Error? {
         self.maxIter = config.maxIter;
         self.verbose = config.verbose;
@@ -48,6 +65,10 @@ public isolated distinct client class Agent {
             : check new FunctionCallAgent(config.model, config.tools);
     }
 
+    # Executes the agent for a given user query.
+    #
+    # + query - Natural language command for the agent.
+    # + return - The agent's response or an error.
     isolated remote function run(string query) returns string|Error {
         var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose);
         return result.answer ?: "";
