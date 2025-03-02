@@ -20,19 +20,21 @@ package io.ballerina.lib.ai.plugin;
 
 import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.projects.DocumentId;
+import io.ballerina.projects.ModuleId;
 import io.ballerina.projects.plugins.CodeModifier;
 import io.ballerina.projects.plugins.CodeModifierContext;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
 
 /**
  * Analyzes a Ballerina AI tools and report diagnostics, and generates json schema for tools.
  */
 public class AiCodeModifier extends CodeModifier {
     private final Map<DocumentId, ModifierContext> modifierContextMap = new HashMap<>();
-    private final AtomicBoolean hasInitMethod = new AtomicBoolean(false);
+    private final Set<ModuleId> modulesWithPredefinedInitMethods = new HashSet<>();
 
     @Override
     public void init(CodeModifierContext codeModifierContext) {
@@ -40,8 +42,9 @@ public class AiCodeModifier extends CodeModifier {
                 SyntaxKind.ANNOTATION);
         codeModifierContext.addSyntaxNodeAnalysisTask(new ModuleLevelAgentAnalysisTask(modifierContextMap),
                 SyntaxKind.MODULE_VAR_DECL);
-        codeModifierContext.addSyntaxNodeAnalysisTask(new InitFunctionAnalysisTask(hasInitMethod),
+        codeModifierContext.addSyntaxNodeAnalysisTask(new InitFunctionAnalysisTask(modulesWithPredefinedInitMethods),
                 SyntaxKind.FUNCTION_DEFINITION);
-        codeModifierContext.addSourceModifierTask(new AiSourceModifier(modifierContextMap, hasInitMethod));
+        codeModifierContext.addSourceModifierTask(new AiSourceModifier(modifierContextMap,
+                modulesWithPredefinedInitMethods));
     }
 }

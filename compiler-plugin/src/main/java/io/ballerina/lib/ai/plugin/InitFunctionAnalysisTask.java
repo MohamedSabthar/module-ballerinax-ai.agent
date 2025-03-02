@@ -21,21 +21,22 @@ package io.ballerina.lib.ai.plugin;
 import io.ballerina.compiler.api.symbols.FunctionSymbol;
 import io.ballerina.compiler.api.symbols.Symbol;
 import io.ballerina.compiler.api.symbols.SymbolKind;
+import io.ballerina.projects.ModuleId;
 import io.ballerina.projects.plugins.AnalysisTask;
 import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
 
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
 
 /**
  * Analyzes a Ballerina module init function.
  */
 class InitFunctionAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisContext> {
     private static final String INIT_METHOD_NAME = "init";
-    private final AtomicBoolean hasInitMethod;
+    Set<ModuleId> modulesWithPredefinedInitMethods;
 
-    public InitFunctionAnalysisTask(AtomicBoolean hasInitMethod) {
-        this.hasInitMethod = hasInitMethod;
+    public InitFunctionAnalysisTask(Set<ModuleId> modulesWithInitMethod) {
+        this.modulesWithPredefinedInitMethods = modulesWithInitMethod;
     }
 
     @Override
@@ -51,6 +52,6 @@ class InitFunctionAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisContext
         if (functionSymbol.getName().isEmpty() || !functionSymbol.getName().get().equals(INIT_METHOD_NAME)) {
             return;
         }
-        hasInitMethod.set(true);
+        modulesWithPredefinedInitMethods.add(context.documentId().moduleId());
     }
 }

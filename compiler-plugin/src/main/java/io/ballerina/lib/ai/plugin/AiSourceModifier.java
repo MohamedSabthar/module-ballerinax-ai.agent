@@ -37,6 +37,7 @@ import io.ballerina.compiler.syntax.tree.SyntaxTree;
 import io.ballerina.compiler.syntax.tree.Token;
 import io.ballerina.projects.DocumentId;
 import io.ballerina.projects.Module;
+import io.ballerina.projects.ModuleId;
 import io.ballerina.projects.plugins.ModifierTask;
 import io.ballerina.projects.plugins.SourceModifierContext;
 import io.ballerina.tools.text.TextDocument;
@@ -44,11 +45,12 @@ import io.ballerina.tools.text.TextDocument;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.CLOSE_BRACE_TOKEN;
 import static io.ballerina.compiler.syntax.tree.SyntaxKind.COLON_TOKEN;
@@ -70,12 +72,13 @@ import static io.ballerina.lib.ai.plugin.ToolAnnotationConfig.PARAMETERS_FIELD_N
 class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     private static final String EMPTY_STRING = "";
     private final Map<DocumentId, ModifierContext> modifierContextMap;
-    private final boolean hasInitMethod;
-    private boolean initMethodModified = false;
+    private final Set<ModuleId> modulesWithPredefinedInitMethods;
+    private final Set<ModuleId> modulesWithDesugaredAgentsWithInitMethod = new HashSet<>();
 
-    AiSourceModifier(Map<DocumentId, ModifierContext> modifierContextMap, AtomicBoolean hasInitMethod) {
+    AiSourceModifier(Map<DocumentId, ModifierContext> modifierContextMap,
+                     Set<ModuleId> modulesWithPredefinedInitMethods) {
         this.modifierContextMap = modifierContextMap;
-        this.hasInitMethod = hasInitMethod.get();
+        this.modulesWithPredefinedInitMethods = modulesWithPredefinedInitMethods;
     }
 
     @Override
@@ -89,34 +92,44 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
                                          ModifierContext modifierContext) {
         Module module = context.currentPackage().module(documentId.moduleId());
         ModulePartNode rootNode = module.document(documentId).syntaxTree().rootNode();
-        ModulePartNode updatedRoot = modifyModulePartRoot(rootNode, modifierContext);
+        ModulePartNode updatedRoot = modifyModulePartRoot(rootNode, modifierContext, documentId);
         updateDocument(context, module, documentId, updatedRoot);
     }
 
-    private ModulePartNode modifyModulePartRoot(ModulePartNode modulePartNode, ModifierContext modifierContext) {
+    private ModulePartNode modifyModulePartRoot(ModulePartNode modulePartNode,
+                                                ModifierContext modifierContext, DocumentId documentId) {
         List<ModuleMemberDeclarationNode> modifiedMembers = getModifiedModuleMembers(modulePartNode.members(),
-                modifierContext);
+                modifierContext, documentId);
         return modulePartNode.modify().withMembers(NodeFactory.createNodeList(modifiedMembers)).apply();
     }
 
     private List<ModuleMemberDeclarationNode> getModifiedModuleMembers(NodeList<ModuleMemberDeclarationNode> members,
-                                                                       ModifierContext modifierContext) {
+            ModifierContext modifierContext,
+            DocumentId documentId) {
         Map<AnnotationNode, AnnotationNode> modifiedAnnotations = getModifiedAnnotations(modifierContext);
         Set<ModuleVariableDeclarationNode> agentDeclarations = modifierContext.getModuleLevelAgentDeclarations();
         List<ModuleMemberDeclarationNode> modifiedMembers = new ArrayList<>();
+
         for (ModuleMemberDeclarationNode member : members) {
             modifiedMembers.add(getModifiedModuleMember(member, modifiedAnnotations, agentDeclarations));
         }
-        if (!hasInitMethod && !initMethodModified) {
-            ModuleMemberDeclarationNode init = createInitMethodNode();
-            initMethodModified = true;
-            modifiedMembers.add(init);
+        ModuleId moduleId = documentId.moduleId();
+        if (!modulesWithPredefinedInitMethods.contains(moduleId)
+                && !modulesWithDesugaredAgentsWithInitMethod.contains(moduleId)) {
+            ModuleMemberDeclarationNode initFunctionDeclaration = desugarAgentsWithinInitFunction(moduleId);
+            modulesWithDesugaredAgentsWithInitMethod.add(moduleId);
+            modifiedMembers.add(initFunctionDeclaration);
         }
         return modifiedMembers;
     }
 
-    private ModuleMemberDeclarationNode createInitMethodNode() {
-        List<ModuleVariableDeclarationNode> agentDeclarations = this.modifierContextMap.values().stream()
+    private ModuleMemberDeclarationNode desugarAgentsWithinInitFunction(ModuleId moduleId) {
+        Set<DocumentId> documentIds = this.modifierContextMap
+                .keySet().stream()
+                .filter(doc -> doc.moduleId().equals(moduleId)).collect(Collectors.toSet());
+        Stream<ModifierContext> modifierContextStream = this.modifierContextMap.entrySet().stream()
+                .filter(entry -> documentIds.contains(entry.getKey())).map(Map.Entry::getValue);
+        List<ModuleVariableDeclarationNode> agentDeclarations = modifierContextStream
                 .map(ModifierContext::getModuleLevelAgentDeclarations).flatMap(Collection::stream).toList();
         String agentInitializationSourceCode = agentDeclarations.stream().map(Node::toSourceCode)
                 .map(code -> code.replaceFirst(".*Agent", EMPTY_STRING))
@@ -263,8 +276,8 @@ class AiSourceModifier implements ModifierTask<SourceModifierContext> {
     }
 
     private ModuleMemberDeclarationNode getModifiedModuleMember(ModuleMemberDeclarationNode member,
-            Map<AnnotationNode, AnnotationNode> modifiedAnnotations,
-            Set<ModuleVariableDeclarationNode> agentDeclarations) {
+                                                                Map<AnnotationNode, AnnotationNode> modifiedAnnotations,
+                                                                Set<ModuleVariableDeclarationNode> agentDeclarations) {
         if (member.kind() == FUNCTION_DEFINITION) {
             return modifyFunction((FunctionDefinitionNode) member, modifiedAnnotations);
         }
