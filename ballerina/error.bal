@@ -77,3 +77,5 @@ public type ToolInvalidInputError distinct LlmInvalidGenerationError;
 # Errors occurred due to missing mandotary path or query parameters.
 public type MissingHttpParameterError distinct ToolInvalidInputError;
 
+# Represents an error that occurs when the maximum number of iterations has been exceeded.
+public type MaxIterationExceededError distinct (Error & error<record{|(ExecutionResult|ExecutionError)[] iterationSteps;|}>);

@@ -83,13 +83,14 @@ public isolated distinct client class FunctionCallAgent {
             messages.unshift(...additionalMessages);
         }
 
-        return self.model.chat(messages,
+        ChatAssistantMessage response = check self.model.chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
+        return response.content is string ? response.content : response?.function_call;
     }
 
     # Execute the agent for a given user's query.
