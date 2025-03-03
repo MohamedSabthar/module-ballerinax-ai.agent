@@ -48,15 +48,25 @@ isolated function sendMail(record {|string senderEmail; MessageRequest messageRe
 
 public client class MockLLM {
     ChatModelConfig modelConfig = {};
-    public isolated function chatComplete(ChatMessage[] messages, string? stop) returns string|LlmError {
+
+    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop)
+        returns ChatAssistantMessage|LlmError {
         ChatMessage lastMessage = messages.pop();
         string prompt = lastMessage is ChatUserMessage ? lastMessage.content : "";
         if prompt.includes("Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?") {
             int queryLevel = regexp:findAll(re `observation`, prompt.toLowerAscii()).length();
             io:println(queryLevel, prompt);
-            match queryLevel {
-                3 => {
-                    return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
+            string content = check getChatAssistantMessageContent(queryLevel);
+            return {role: ASSISTANT, content};
+        }
+        return error LlmError("Unexpected prompt to MockLLM");
+    }
+}
+
+isolated function getChatAssistantMessageContent(int queryLevel) returns string|LlmError {
+    match queryLevel {
+        3 => {
+            return "I should use a search engine to find out who Leo DiCaprio's girlfriend is, and then use a calculator to calculate her current age raised to the 0.43 power." +
                 "Action:" +
                 "```" +
                 "{" +
@@ -68,9 +78,9 @@ public client class MockLLM {
                     "}" +
                 "}" +
                 "```";
-                }
-                4 => {
-                    return " I need to find out Camila Morrone's age" +
+        }
+        4 => {
+            return " I need to find out Camila Morrone's age" +
                 "Action:" +
                 "```" +
                 "{" +
@@ -83,10 +93,10 @@ public client class MockLLM {
                 "}" +
                 "```";
 
-                }
-                5 => {
-                    {
-                        return " I now need to calculate the age raised to the 0.43 power" +
+        }
+        5 => {
+            {
+                return " I now need to calculate the age raised to the 0.43 power" +
                 "Action:" +
                 "```" +
                 "{" +
@@ -98,12 +108,10 @@ public client class MockLLM {
                     "}" +
                 "}" +
                 "```";
-                    }
-                }
             }
         }
-        return error("Unexpected prompt to MockLLM");
     }
+    return error LlmError("Unexpected prompt to MockLLM");
 }
 
 isolated function testTool(string a, string b = "default-one", string c = "default-two") returns string {

@@ -29,7 +29,7 @@ public isolated client class ReActAgent {
     # ToolStore instance to store the tools used by the agent
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
-    public final ChatLlmModel model;
+    public final Model model;
 
     public final Memory memory;
 
@@ -37,7 +37,7 @@ public isolated client class ReActAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(ChatLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.memory = memory;
@@ -49,7 +49,9 @@ public isolated client class ReActAgent {
     #
     # + llmResponse - Raw LLM response
     # + return - A record containing the tool decided by the LLM, chat response or an error if the response is invalid
-    public isolated function parseLlmResponse(json llmResponse) returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
+    public isolated function parseLlmResponse(json llmResponse) 
+        returns LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError => 
+        parseReActLlmResponse(normalizeLlmResponse(llmResponse.toString()));
 
     # Use LLM to decide the next tool/step based on the ReAct prompting.
     #
@@ -116,19 +118,28 @@ public isolated client class ReActAgent {
         }else{
             messages.unshift(...additionalMessages);
         }
-
-        return self.model.chatComplete(messages);
+        
+        return self.generate(messages);
     }
 
     # Generate ReAct response for the given prompt.
     #
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response
-    isolated function generate(string prompt) returns string|LlmError {
-        return self.model.chatComplete([{role: USER,content: prompt}], stop = OBSERVATION_KEY);
+    isolated function generate(ChatMessage[] messages) returns json|LlmError {
+        ChatAssistantMessage response = check self.model.chat(messages, stop = OBSERVATION_KEY);
+        return response.content is string ? response.content : response?.function_call;
     }
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+    # Execute the agent for a given user's query.
+    #
+    # + query - Natural langauge commands to the agent  
+    # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
+    # + context - Context values to be used by the agent to execute the task
+    # + verbose - If true, then print the reasoning steps (default: true)
+    # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) 
+        returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
         return run(self, query, maxIter, context, verbose, memory);
     }
 }
