@@ -67,13 +67,14 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        return self.model.chat(messages,
+        ChatAssistantMessage response = check self.model.chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
+        return response.content is string ? response.content : response?.function_call;
     }
 
     # Execute the agent for a given user's query.
