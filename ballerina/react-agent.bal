@@ -71,7 +71,7 @@ ${THOUGHT_KEY}`;
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response
     isolated function generate(string prompt) returns json|LlmError {
-        ChatAssistantMessage response = check self.model.chat([{role: USER, content: prompt}], stop = OBSERVATION_KEY);
+        ChatAssistantMessage response = check self.model->chat([{role: USER, content: prompt}], stop = OBSERVATION_KEY);
         return response.content is string ? response.content : response?.function_call;
     }
 

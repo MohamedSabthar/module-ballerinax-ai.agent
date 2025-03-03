@@ -105,7 +105,7 @@ public type FunctionCall record {|
 
 # Represents an extendable client for interacting with an AI model.
 public type Model distinct isolated client object {
-    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ()) 
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ()) 
         returns ChatAssistantMessage|LlmError;
 };
 
@@ -134,7 +134,7 @@ public isolated client class OpenAiModel {
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) 
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) 
         returns ChatAssistantMessage|LlmError {
         chat:CreateChatCompletionRequest request = {...self.modelConfig, stop, messages };
         if tools.length() > 0 {
@@ -190,7 +190,7 @@ public isolated client class AzureOpenAiModel {
     # + tools - Tool definitions to be used for the tool call
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
-    public isolated function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
+    isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ()) returns ChatAssistantMessage|LlmError {
         azure_chat:CreateChatCompletionRequest request = {...self.modelConfig, stop, messages };
         if tools.length() > 0 {
             request.functions = tools;
