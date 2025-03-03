@@ -71,7 +71,12 @@ public isolated distinct client class Agent {
     # + return - The agent's response or an error.
     isolated remote function run(string query) returns string|Error {
         var result = self.agent->run(query, self.maxIter, getFomatedSystemPrompt(self.systemPrompt), self.verbose);
-        return result.answer ?: "";
+        string? answer = result.answer;
+        if answer is string {
+            return answer;
+        }
+        return error MaxIterationExceededError("Maximum iteration limit exceeded while processing the query.",
+            iterationSteps = result.steps);
     }
 }
 
