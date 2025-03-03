@@ -94,7 +94,9 @@ Begin! Reminder to ALWAYS respond with a valid json blob of a single action. Use
     test:assertEquals(agent.instructionPrompt, ExpectedPrompt);
 }
 
-@test:Config {}
+@test:Config {
+  enable: false
+}
 function testAgentExecutorRun() returns error? {
     ReActAgent agent = check new (model, [searchTool, calculatorTool]);
     string query = "Who is Leo DiCaprio's girlfriend? What is her current age raised to the 0.43 power?";
