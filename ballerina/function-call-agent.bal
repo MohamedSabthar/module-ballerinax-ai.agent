@@ -23,13 +23,16 @@ public isolated distinct client class FunctionCallAgent {
     # LLM model instance (should be a function call model)
     public final Model model;
 
+    public final Memory memory;
+
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
     }
 
     # Parse the function calling API response and extract the tool to be executed.
@@ -67,13 +70,27 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
-        return self.model.chat(messages,
+        ChatMessage systemMsg = messages.remove(0);
+        error? updateResult = self.memory.update(systemMsg);
+        if updateResult is error {
+            return error LlmError("Failed to update memory with system message");
+        }
+        ChatMessage[]|error additionalMessages = self.memory.get();
+        
+        if additionalMessages is error {
+            return error LlmError("Failed to get memory");
+        }else{
+            messages.unshift(...additionalMessages);
+        }
+
+        ChatAssistantMessage response = check self.model.chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,
             description: tool.description,
             parameters: tool.variables
         });
+        return response.content is string ? response.content : response?.function_call;
     }
 
     # Execute the agent for a given user's query.
@@ -83,9 +100,9 @@ public isolated distinct client class FunctionCallAgent {
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) 
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) 
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose);
+        return run(self, query, maxIter, context, verbose, memory);
     }
 }
 

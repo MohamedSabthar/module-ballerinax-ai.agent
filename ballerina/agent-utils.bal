@@ -48,6 +48,8 @@ public type ExecutionError record {|
     json llmResponse;
     # Error caused during the execution
     LlmInvalidGenerationError|ToolExecutionError 'error;
+    # Observation on the caused error as additional instruction to the LLM
+    string observation;
 |};
 
 # An chat response by the LLM
@@ -73,6 +75,7 @@ public type ToolOutput record {|
 public type BaseAgent distinct isolated client object {
     public Model model;
     public ToolStore toolStore;
+    public Memory memory;
 
     # Parse the llm response and extract the tool to be executed.
     #
@@ -86,7 +89,7 @@ public type BaseAgent distinct isolated client object {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError;
 
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|};
 };
 
 # An iterator to iterate over agent's execution
@@ -172,7 +175,8 @@ public class Executor {
                 }
                 executionResult = {
                     llmResponse,
-                    'error: output
+                    'error: output,
+                    observation: observation.toString()
                 };
             } else {
                 anydata|error value = output.value;
@@ -186,7 +190,8 @@ public class Executor {
             observation = "Tool extraction failed due to invalid JSON_BLOB. Retry with correct JSON_BLOB.";
             executionResult = {
                 llmResponse,
-                'error: parseLlmResponse
+                'error: parseLlmResponse,
+                observation: observation.toString()
             };
         }
         self.update({
@@ -226,11 +231,18 @@ public class Executor {
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
+public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose, Memory memory) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];
     string? content = ();
     Iterator iterator = new (agent, query = query, context = context);
     int iter = 0;
+    
+    ChatUserMessage usermsg = {
+        role: "user",
+        content: query
+    };
+    error? update = memory.update(usermsg);
+
     foreach ExecutionResult|LlmChatResponse|ExecutionError|Error step in iterator {
         if iter == maxIter {
             break;
@@ -245,6 +257,14 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
             if verbose {
                 io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
             }
+            
+            ChatAssistantMessage asstsmg = {
+                role: "assistant",
+                content: step.content
+            };
+
+            error?asstupdate = memory.update(asstsmg);
+
             break;
         }
         iter += 1;
@@ -257,6 +277,7 @@ ${BACKTICKS}
 {
     ${ACTION_NAME_KEY}: ${tool.name},
     ${ACTION_ARGUEMENTS_KEY}: ${(tool.arguments ?: "None").toString()}
+
 }
 ${BACKTICKS}`);
                 anydata|error observation = step?.observation;
@@ -265,6 +286,7 @@ ${BACKTICKS}`);
                 } else if observation !is () {
                     io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
                 }
+
             } else {
                 error? cause = step.'error.cause();
                 io:println(string `LLM Generation Error: 
@@ -277,6 +299,24 @@ ${BACKTICKS}
 ${BACKTICKS}`);
             }
         }
+
+        if step is ExecutionResult {
+            LlmToolResponse tool = step.tool;
+            anydata|error observation = step?.observation;
+            ChatAssistantMessage asstsmg = {
+                    role: "assistant",
+                    function_call: {name: tool.name, arguments: tool.arguments.toJsonString()}
+                };
+                error? chatupdate = memory.update(asstsmg);
+
+            ChatFunctionMessage funcmsg = {
+                    role: "function",
+                    name: tool.name,
+                    content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()
+                };
+                error? funcupdate = memory.update(funcmsg);
+        }
+
         steps.push(step);
     }
     return {steps, answer: content};

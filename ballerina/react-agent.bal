@@ -31,13 +31,16 @@ public isolated client class ReActAgent {
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
     public final Model model;
 
+    public final Memory memory;
+
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools) returns Error? {
+    public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
+        self.memory = memory;
         self.instructionPrompt = constructReActPrompt(extractToolInfo(self.toolStore));
         log:printDebug("Instruction Prompt Generated Successfully", instructionPrompt = self.instructionPrompt);
     }
@@ -55,23 +58,76 @@ public isolated client class ReActAgent {
     # + progress - Execution progress with the current query and execution history
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
-        map<json>|string? context = progress.context;
-        string contextPrompt = context is () ? "" : string `${"\n\n"}You can use these information if needed: ${context.toString()}$`;
+            // add the question
+    ChatMessage[] messages = [
+        {
+            role: USER,
+            content: progress.query
+        }
+    ];
+    // add the context as the first message
+    if progress.context !is () {
+        messages.unshift({
+            role: SYSTEM,
+            content: string `${self.instructionPrompt} You can use these information if needed: ${progress.context.toString()}`
+        });
+    }
+    // include the history
+    foreach ExecutionStep step in progress.history {
+        // FunctionCall|error functionCall = step.llmResponse.fromJsonWithType();
+        // if functionCall is error {
+        //     panic error Error("Badly formated history for function call agent", llmResponse = step.llmResponse);
+        // }
 
-        string reactPrompt = string `${self.instructionPrompt}${contextPrompt}
+        LlmToolResponse|LlmChatResponse|LlmInvalidGenerationError res = self.parseLlmResponse(step.llmResponse);
+        if res is LlmInvalidGenerationError {
+             messages.push({
+            role: ASSISTANT,
+            content: step.llmResponse.toJsonString()
+        });
+
+        }
+        if res is LlmChatResponse {
+             messages.push({
+            role: ASSISTANT,
+            content: res.content
+        });
+        continue;
+
+        }
+        if res is LlmToolResponse {
+            messages.push({role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString()}},
+            {
+                role: FUNCTION,
+                name: res.name,
+                content: getObservationString(step.observation)
+            });
+        }
+      
+    }
+
+        ChatMessage systemMsg = messages.remove(0);
+        error? updateResult = self.memory.update(systemMsg);
+        if updateResult is error {
+            return error LlmError("Failed to update memory with system message");
+        }
+        ChatMessage[]|error additionalMessages = self.memory.get();
         
-Question: ${progress.query}
-${constructHistoryPrompt(progress.history)}
-${THOUGHT_KEY}`;
-        return check self.generate(reactPrompt);
+        if additionalMessages is error {
+            return error LlmError("Failed to get memory");
+        }else{
+            messages.unshift(...additionalMessages);
+        }
+        
+        return self.generate(messages);
     }
 
     # Generate ReAct response for the given prompt.
     #
     # + prompt - ReAct prompt to decide the next tool
     # + return - ReAct response
-    isolated function generate(string prompt) returns json|LlmError {
-        ChatAssistantMessage response = check self.model.chat([{role: USER, content: prompt}], stop = OBSERVATION_KEY);
+    isolated function generate(ChatMessage[] messages) returns json|LlmError {
+        ChatAssistantMessage response = check self.model.chat(messages, stop = OBSERVATION_KEY);
         return response.content is string ? response.content : response?.function_call;
     }
 
@@ -82,9 +138,9 @@ ${THOUGHT_KEY}`;
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
-    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true) 
+    isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) 
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
-        return run(self, query, maxIter, context, verbose);
+        return run(self, query, maxIter, context, verbose, memory);
     }
 }
 
