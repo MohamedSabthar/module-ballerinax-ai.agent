@@ -29,7 +29,7 @@ public isolated distinct client class FunctionCallAgent {
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
-    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory) returns error? {
+    public isolated function init(FunctionCallLlmModel model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns error? {
         self.toolStore = check new (...tools);
         self.model = model;
         self.memory = memory;
@@ -70,6 +70,19 @@ public isolated distinct client class FunctionCallAgent {
     # + return - LLM response containing the tool or chat response (or an error if the call fails)
     public isolated function selectNextTool(ExecutionProgress progress) returns json|LlmError {
         ChatMessage[] messages = createFunctionCallMessages(progress);
+        ChatMessage systemMsg = messages.remove(0);
+        error? updateResult = self.memory.update(systemMsg);
+        if updateResult is error {
+            return error LlmError("Failed to update memory with system message");
+        }
+        ChatMessage[]|error additionalMessages = self.memory.get();
+        
+        if additionalMessages is error {
+            return error LlmError("Failed to get memory");
+        }else{
+            messages.unshift(...additionalMessages);
+        }
+
         return self.model.functionCall(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {

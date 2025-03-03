@@ -48,6 +48,8 @@ public type ExecutionError record {|
     json llmResponse;
     # Error caused during the execution
     LlmInvalidGenerationError|ToolExecutionError 'error;
+    # Observation on the caused error as additional instruction to the LLM
+    string observation;
 |};
 
 # An chat response by the LLM
@@ -173,7 +175,8 @@ public class Executor {
                 }
                 executionResult = {
                     llmResponse,
-                    'error: output
+                    'error: output,
+                    observation: observation.toString()
                 };
             } else {
                 anydata|error value = output.value;
@@ -187,7 +190,8 @@ public class Executor {
             observation = "Tool extraction failed due to invalid JSON_BLOB. Retry with correct JSON_BLOB.";
             executionResult = {
                 llmResponse,
-                'error: parseLlmResponse
+                'error: parseLlmResponse,
+                observation: observation.toString()
             };
         }
         self.update({
@@ -237,8 +241,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
         role: "user",
         content: query
     };
-
-    _ = check memory.update(usermsg);
+    error? update = memory.update(usermsg);
 
     foreach ExecutionResult|LlmChatResponse|ExecutionError|error step in iterator {
         if iter == maxIter {
@@ -260,7 +263,7 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
                 content: step.content
             };
 
-            _ = check memory.update(asstsmg);
+            error?asstupdate = memory.update(asstsmg);
 
             break;
         }
@@ -283,19 +286,6 @@ ${BACKTICKS}`);
                 } else if observation !is () {
                     io:println(string `${OBSERVATION_KEY}: ${observation.toString()}`);
                 }
-                
-                ChatAssistantMessage asstsmg = {
-                    role: "assistant",
-                    function_call: {name: tool.name, arguments: tool.arguments is map<json> ? string `The arguments for the tool are ${tool.arguments.toString()}` : "None"}
-                };
-                _ = check memory.update(asstsmg);
-
-                ChatFunctionMessage funcmsg = {
-                    role: "function",
-                    name: tool.name,
-                    content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()
-                };
-                _ = check memory.update(funcmsg);
 
             } else {
                 error? cause = step.'error.cause();
@@ -308,6 +298,23 @@ ${BACKTICKS}
 }
 ${BACKTICKS}`);
             }
+        }
+
+        if step is ExecutionResult {
+            LlmToolResponse tool = step.tool;
+            anydata|error observation = step?.observation;
+            ChatAssistantMessage asstsmg = {
+                    role: "assistant",
+                    function_call: {name: tool.name, arguments: tool.arguments.toJsonString()}
+                };
+                error? chatupdate = memory.update(asstsmg);
+
+            ChatFunctionMessage funcmsg = {
+                    role: "function",
+                    name: tool.name,
+                    content: observation is error ? observation.toString() : observation is () ? "" : observation.toString()
+                };
+                error? funcupdate = memory.update(funcmsg);
         }
 
         steps.push(step);

@@ -13,14 +13,21 @@ public isolated class MessageWindowChatMemory{
         self.k = k;
     }
     public isolated function get() returns ChatMessage[]|error {
-        return self.chatHistory;
+        lock{
+            return self.chatHistory.clone();
+        }
     }
     public isolated function update(ChatMessage message) returns error? {
         lock{
+            if (message is ChatSystemMessage) {
+                self.enqueSystemPrompt(self.chatHistory, message.clone());
+                return;
+            }
+
             if (self.chatHistory.length() == self.k) {
             _ = self.deque(self.chatHistory);
-        }
-        self.enque(self.chatHistory, message.clone());
+            }
+            self.enque(self.chatHistory, message.clone());
         }
     }
     
@@ -38,7 +45,19 @@ public isolated class MessageWindowChatMemory{
         if (chatHistory.length() == 0) {
             return ();  // if not handled shift will panic for empty array
         }
-        return chatHistory.shift();
+        return chatHistory.remove(1); 
+    }
+
+    private isolated function enqueSystemPrompt(ChatMessage[] chatHistory, ChatMessage message) {
+        if(chatHistory.length() == self.k){
+            chatHistory[0] = message;
+        }else{
+            if(chatHistory[0] is ChatSystemMessage){
+                chatHistory[0] = message;
+            } else{
+                chatHistory.unshift(message);
+            }
+        }
     }
 
 }
