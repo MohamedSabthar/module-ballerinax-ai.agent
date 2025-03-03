@@ -52,7 +52,7 @@ public isolated class MessageWindowChatMemory{
         if(chatHistory.length() == self.k){
             chatHistory[0] = message;
         }else{
-            if(chatHistory[0] is ChatSystemMessage){
+            if(chatHistory.length() > 0 && chatHistory[0] is ChatSystemMessage){
                 chatHistory[0] = message;
             } else{
                 chatHistory.unshift(message);
