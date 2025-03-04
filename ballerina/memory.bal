@@ -4,62 +4,43 @@ public type Memory isolated object {
     public isolated function delete() returns error?;
 };
 
-public isolated class MessageWindowChatMemory{
+public isolated class MessageWindowChatMemory {
     *Memory;
-    final int k;
-    private ChatMessage[] chatHistory = [];
+    final int size;
+    private ChatSystemMessage? systemPrompt = ();
+    private final ChatMessage[] memory = [];
 
-    public isolated function init(int k = 10) {
-        self.k = k;
+    public isolated function init(int size = 10) {
+        self.size = size;
     }
+
     public isolated function get() returns ChatMessage[]|error {
-        lock{
-            return self.chatHistory.clone();
+        lock {
+            ChatMessage[] memory = self.memory.clone();
+            ChatSystemMessage? systemPrompt = self.systemPrompt;
+            if systemPrompt is ChatSystemMessage {
+                memory.unshift(systemPrompt);
+            }
+            return memory.clone();
         }
     }
+
     public isolated function update(ChatMessage message) returns error? {
-        lock{
-            if (message is ChatSystemMessage) {
-                self.enqueSystemPrompt(self.chatHistory, message.clone());
+        lock {
+            if message is ChatSystemMessage {
+                self.systemPrompt = message.clone();
                 return;
             }
-
-            if (self.chatHistory.length() == self.k) {
-            _ = self.deque(self.chatHistory);
+            if self.memory.length() >= self.size - 1 {
+                _ = self.memory.shift();
             }
-            self.enque(self.chatHistory, message.clone());
+            self.memory.push(message.clone());
         }
     }
-    
+
     public isolated function delete() returns error? {
-        lock{
-            self.chatHistory.removeAll();
+        lock {
+            self.memory.removeAll();
         }
     }
-
-    private isolated function enque(ChatMessage[] chatHistory, ChatMessage message) {
-        chatHistory.push(message);
-    }
-
-    private isolated function deque(ChatMessage[] chatHistory) returns ChatMessage? {
-        if (chatHistory.length() == 0) {
-            return ();  // if not handled shift will panic for empty array
-        }
-        return chatHistory.remove(1); 
-    }
-
-    private isolated function enqueSystemPrompt(ChatMessage[] chatHistory, ChatMessage message) {
-        if(chatHistory.length() == self.k){
-            chatHistory[0] = message;
-        }else{
-            if(chatHistory[0] is ChatSystemMessage){
-                chatHistory[0] = message;
-            } else{
-                chatHistory.unshift(message);
-            }
-        }
-    }
-
-}
-
-
+};

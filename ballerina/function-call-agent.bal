@@ -22,13 +22,14 @@ public isolated distinct client class FunctionCallAgent {
     public final ToolStore toolStore;
     # LLM model instance (should be a function call model)
     public final Model model;
-
+    # The memory associated with the agent.
     public final Memory memory;
 
     # Initialize an Agent.
     #
     # + model - LLM model instance
     # + tools - Tools to be used by the agent
+    # + memory - The memory instance
     public isolated function init(Model model, (BaseToolKit|ToolConfig|FunctionTool)[] tools, Memory memory = new MessageWindowChatMemory(10)) returns Error? {
         self.toolStore = check new (...tools);
         self.model = model;
@@ -99,6 +100,7 @@ public isolated distinct client class FunctionCallAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
+    # + memory - The memory object to be used during the execution. Default is a new `MessageWindowChatMemory` with a size of 10.
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) 
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {

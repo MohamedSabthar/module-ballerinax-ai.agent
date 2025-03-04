@@ -45,6 +45,7 @@ public type AgentConfiguration record {|
     int maxIter = 5;
     # Specifies whether verbose logging is enabled.
     boolean verbose = false;
+    # The memory component used by the agent to store and manage conversation history.
     Memory memory = new MessageWindowChatMemory(10);
 |};
 

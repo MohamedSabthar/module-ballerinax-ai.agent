@@ -232,6 +232,7 @@ public class Executor {
 # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
+# + memory - The memory to be used during execution.
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
 public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose, Memory memory) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];

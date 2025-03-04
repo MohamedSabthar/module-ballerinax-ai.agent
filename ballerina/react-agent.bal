@@ -30,7 +30,7 @@ public isolated client class ReActAgent {
     public final ToolStore toolStore;
     # LLM model instance to be used by the agent (Can be either CompletionLlmModel or ChatLlmModel)
     public final Model model;
-
+    # The memory associated with the agent.
     public final Memory memory;
 
     # Initialize an Agent.
@@ -124,7 +124,7 @@ public isolated client class ReActAgent {
 
     # Generate ReAct response for the given prompt.
     #
-    # + prompt - ReAct prompt to decide the next tool
+    # + messages - Chat history to be processed by the ReAct agent
     # + return - ReAct response
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
         ChatAssistantMessage response = check self.model.chat(messages, stop = OBSERVATION_KEY);
@@ -137,6 +137,7 @@ public isolated client class ReActAgent {
     # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
     # + context - Context values to be used by the agent to execute the task
     # + verbose - If true, then print the reasoning steps (default: true)
+    # + memory - The memory object to be used during the execution. Default is a new `MessageWindowChatMemory` with a size of 10.
     # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
     isolated remote function run(string query, int maxIter = 5, string|map<json> context = {}, boolean verbose = true, Memory memory = new MessageWindowChatMemory(10)) 
         returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
