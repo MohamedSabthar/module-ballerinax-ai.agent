@@ -6,7 +6,7 @@ public type Memory isolated object {
 
 public isolated class MessageWindowChatMemory {
     *Memory;
-    final int size;
+    private final int size;
     private ChatSystemMessage? systemPrompt = ();
     private final ChatMessage[] memory = [];
 
