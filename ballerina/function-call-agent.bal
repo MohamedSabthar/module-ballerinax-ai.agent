@@ -84,7 +84,7 @@ public isolated distinct client class FunctionCallAgent {
             messages.unshift(...additionalMessages);
         }
 
-        ChatAssistantMessage response = check self.model.chat(messages,
+        ChatAssistantMessage response = check self.model->chat(messages,
         from AgentTool tool in self.toolStore.tools.toArray()
         select {
             name: tool.name,

@@ -4,9 +4,9 @@ public type Memory isolated object {
     public isolated function delete() returns error?;
 };
 
-public isolated class MessageWindowChatMemory {
+public isolated class MessageWindowChatMemory  {
     *Memory;
-    final int size;
+    private final int size;
     private ChatSystemMessage? systemPrompt = ();
     private final ChatMessage[] memory = [];
 
@@ -43,4 +43,4 @@ public isolated class MessageWindowChatMemory {
             self.memory.removeAll();
         }
     }
-};
+}

@@ -67,7 +67,7 @@ isolated function mutiply(int a, int b) returns string {
 isolated client distinct class MockLlm {
     *agent:Model;
 
-    public isolated function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
+    isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
         returns agent:ChatAssistantMessage|agent:LlmError {
         agent:ChatMessage lastMessage = messages.pop();
         string prompt = lastMessage is agent:ChatUserMessage ? lastMessage.content : "";

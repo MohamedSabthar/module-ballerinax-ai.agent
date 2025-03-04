@@ -127,7 +127,7 @@ public isolated client class ReActAgent {
     # + messages - Chat history to be processed by the ReAct agent
     # + return - ReAct response
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
-        ChatAssistantMessage response = check self.model.chat(messages, stop = OBSERVATION_KEY);
+        ChatAssistantMessage response = check self.model->chat(messages, stop = OBSERVATION_KEY);
         return response.content is string ? response.content : response?.function_call;
     }
 
