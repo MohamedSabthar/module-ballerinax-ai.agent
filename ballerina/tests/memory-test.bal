@@ -57,21 +57,3 @@ function testClearEmptyMemory() returns error? {
     _ = check chatMemory.delete();
     test:assertEquals(chatMemory.get(), []);
 }
-
-// MessageWindowChatMemory memoryInstance = new (10);
-
-
-
-// memoryInstance.systemPrompt = { role: "system", content: "You are an AI assistant to help users get answers. Respond to the human as helpfully and accurately as possible" };
-
-// memoryInstance.memory = [
-//     { role: "assistant", content: "Hello Aakif! How can I assist you today?" },
-//     { role: "user", content: "Add teh numbers [2,3,4,5]" },
-//     { role: "assistant", content: null, function_call: { name: "sum", arguments: "{ \"numbers\": [2, 3, 4, 5] }" } },
-//     { role: "function", content: "Answer is: 14.0", name: "sum" },
-//     { role: "assistant", content: "The sum of the numbers [2, 3, 4, 5] is 14.0. If you need anything else, let me know!" },
-//     { role: "user", content: "Mutiply teh number obtained after addition by 2. Tell the answer by adressing me in my name" },
-//     { role: "assistant", content: null, function_call: { name: "mutiply", arguments: "{ \"a\": 14, \"b\": 2 }" } },
-//     { role: "function", content: "Answer is: 28", name: "mutiply" },
-//     { role: "assistant", content: "The result of multiplying the sum by 2 is 28, Aakif. If you have any more questions or need further assistance, feel free to ask!" }
-// ];
