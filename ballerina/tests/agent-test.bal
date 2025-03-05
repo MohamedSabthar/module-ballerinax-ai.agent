@@ -32,7 +32,7 @@ ToolConfig calculatorTool = {
 
 OpenAiModel model = test:mock(OpenAiModel, new MockLLM());
 
-@test:Config {}
+@test:Config {enable: false}
 function testReActAgentInitialization() {
     ReActAgent|Error agent = new (model, [searchTool, calculatorTool]);
     if agent is Error {

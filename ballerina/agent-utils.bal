@@ -17,6 +17,8 @@
 import ballerina/io;
 import ballerina/log;
 
+const BACKTICKS = "```";
+
 # Execution progress record
 public type ExecutionProgress record {|
     # Question to the agent
@@ -230,6 +232,7 @@ public class Executor {
 # + maxIter - No. of max iterations that agent will run to execute the task (default: 5)
 # + context - Context values to be used by the agent to execute the task
 # + verbose - If true, then print the reasoning steps (default: true)
+# + memory - The memory to be used during execution.
 # + return - Returns the execution steps tracing the agent's reasoning and outputs from the tools
 public isolated function run(BaseAgent agent, string query, int maxIter, string|map<json> context, boolean verbose, Memory memory) returns record {|(ExecutionResult|ExecutionError)[] steps; string answer?;|} {
     (ExecutionResult|ExecutionError)[] steps = [];
@@ -252,16 +255,28 @@ public isolated function run(BaseAgent agent, string query, int maxIter, string|
             log:printError("Error occured while executing the agent", step, cause = cause !is () ? cause.toString() : "");
             break;
         }
+
+
         if step is LlmChatResponse {
             content = step.content;
             if verbose {
                 io:println(string `${"\n\n"}Final Answer: ${step.content}${"\n\n"}`);
+            }
+
+            if agent is ReActAgent {
+                ChatAssistantMessage asstsmg = {
+                    role: "assistant",
+                    content: string `${BACKTICKS}{\"action\":\"Final Answer\", \"action_input\":\"${step.content}}${BACKTICKS}\"`
+                };
+                error?asstupdate = memory.update(asstsmg);
+                break;
             }
             
             ChatAssistantMessage asstsmg = {
                 role: "assistant",
                 content: step.content
             };
+
 
             error?asstupdate = memory.update(asstsmg);
 
