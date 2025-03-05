@@ -41,6 +41,7 @@ public isolated class MessageWindowChatMemory  {
     public isolated function delete() returns error? {
         lock {
             self.memory.removeAll();
+            self.systemPrompt = ();
         }
     }
 }
