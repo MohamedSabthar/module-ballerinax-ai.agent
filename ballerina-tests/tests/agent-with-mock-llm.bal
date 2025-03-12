@@ -68,7 +68,7 @@ isolated client distinct class MockLlm {
     *agent:Model;
 
     isolated remote function chat(agent:ChatMessage[] messages, agent:ChatCompletionFunctions[] tools, string? stop)
-        returns agent:ChatAssistantMessage[]|agent:LlmError {
+        returns agent:ChatAssistantMessage|agent:LlmError {
         agent:ChatMessage lastMessage = messages.pop();
         string query = lastMessage is agent:ChatUserMessage|agent:ChatFunctionMessage ? lastMessage.content ?: "" : "";
         if (query.includes("Answer is:")) {
@@ -97,8 +97,8 @@ isolated client distinct class MockLlm {
     }
 }
 
-isolated function getChatAssistantMessages(string content) returns agent:ChatAssistantMessage[] {
-    return [{role: agent:ASSISTANT, content}];
+isolated function getChatAssistantMessages(string content) returns agent:ChatAssistantMessage {
+    return {role: agent:ASSISTANT, content};
 }
 
 final MockLlm model = new;

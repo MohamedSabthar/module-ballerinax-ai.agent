@@ -73,7 +73,7 @@ public isolated client class ReActAgent {
                 });
             } else {
                 messages.push(
-                {role: ASSISTANT, function_call: {name: res.name, arguments: res.arguments.toJsonString(), id: res.id}},
+                {role: ASSISTANT, toolCalls: [{name: res.name, arguments: res.arguments.toJsonString(), id: res.id}]},
                 {role: FUNCTION, name: res.name, content: getObservationString(step.observation), id: res.id});
             }
         }
@@ -91,8 +91,9 @@ public isolated client class ReActAgent {
     # + messages - Chat history to be processed by the ReAct agent
     # + return - The processed chat history
     isolated function generate(ChatMessage[] messages) returns json|LlmError {
-        ChatAssistantMessage[] assistantMessages = check self.model->chat(messages, stop = OBSERVATION_KEY);
-        return assistantMessages[0].content is string ? assistantMessages[0].content : assistantMessages[0]?.function_call;
+        ChatAssistantMessage assistantMessage = check self.model->chat(messages, stop = OBSERVATION_KEY);
+        ToolCall[]? toolCalls = assistantMessage.toolCalls;
+        return assistantMessage.content is string ? assistantMessage.content : toolCalls is ToolCall[] ? toolCalls[0] : ();
     }
 
     # Execute the agent for a given user's query.

@@ -156,14 +156,14 @@ public isolated client class OllamaModel {
     # + stop - Stop sequence to stop the completion
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools = [], string? stop = ())
-        returns ChatAssistantMessage[]|LlmError {
+        returns ChatAssistantMessage|LlmError {
         // Ollama chat completion API reference: https://github.com/ollama/ollama/blob/main/docs/api.md#generate-a-chat-completion
         json requestPayload = self.prepareRequestPayload(messages, tools, stop);
         OllamaResponse|error response = self.ollamaClient->/api/chat.post(requestPayload);
         if response is error {
             return error LlmConnectionError("Error while connecting to ollama", response);
         }
-        return self.mapOllamaResponseToAssistantMessages(response);
+        return self.mapOllamaResponseToAssistantMessage(response);
     }
 
     private isolated function prepareRequestPayload(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop)
@@ -192,24 +192,19 @@ public isolated client class OllamaModel {
         return payload;
     }
 
-    private isolated function mapOllamaResponseToAssistantMessages(OllamaResponse response)
-        returns ChatAssistantMessage[] {
-        OllamaToolCall[]? toolCalls = response.message?.tool_calls;
-        if toolCalls is OllamaToolCall[] {
-            return self.mapToolCallsToAssistantMessages(toolCalls);
-        }
-        return [{role: ASSISTANT, content: response.message.content}];
+    private isolated function mapOllamaResponseToAssistantMessage(OllamaResponse response)
+        returns ChatAssistantMessage {
+        OllamaToolCall[]? ollamaToolCalls = response.message?.tool_calls;
+        ToolCall[]? toolCalls = ollamaToolCalls is OllamaToolCall[] ? self.mapOllamaToolCalls(ollamaToolCalls) : ();
+        return {role: ASSISTANT, content: response.message.content, toolCalls};
     }
 
-    private isolated function mapToolCallsToAssistantMessages(OllamaToolCall[] toolCalls)
-        returns ChatAssistantMessage[] {
+    private isolated function mapOllamaToolCalls(OllamaToolCall[] toolCalls)
+        returns ToolCall[] {
         return from OllamaToolCall toolCall in toolCalls
             select {
-                role: ASSISTANT,
-                function_call: {
-                    name: toolCall.'function.name,
-                    arguments: toolCall.'function.arguments.toJsonString()
-                }
+                name: toolCall.'function.name,
+                arguments: toolCall.'function.arguments.toJsonString()
             };
     }
 }
