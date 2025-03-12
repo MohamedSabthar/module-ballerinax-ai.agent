@@ -96,7 +96,7 @@ public isolated distinct client class FunctionCallAgent {
             parameters: tool.variables
         });
         ToolCall[]? toolCalls = response?.toolCalls;
-        return response.content is string ? response.content : toolCalls is ToolCall[] ? toolCalls[0] : ();
+        return toolCalls is ToolCall[] ? toolCalls[0] : response.content;
     }
 
     # Execute the agent for a given user's query.

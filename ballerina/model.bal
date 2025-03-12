@@ -377,7 +377,11 @@ public isolated client class OpenAiModel {
     # + return - Function to be called, chat response or an error in-case of failures
     isolated remote function chat(ChatMessage[] messages, ChatCompletionFunctions[] tools, string? stop = ())
         returns ChatAssistantMessage|LlmError {
-        chat:CreateChatCompletionRequest request = {model: self.modelType, stop, messages};
+        chat:CreateChatCompletionRequest request = {
+            model: self.modelType,
+            stop,
+            messages: self.mapChatMessagesToCompletionMessages(messages)
+        };
         if tools.length() > 0 {
             request.functions = tools;
         }
@@ -397,6 +401,34 @@ public isolated client class OpenAiModel {
             return {role: ASSISTANT, toolCalls: [{name: function_call.name, arguments: function_call.arguments}]};
         }
         return {role: ASSISTANT, content: message?.content ?: ""};
+    }
+
+    private isolated function mapChatMessagesToCompletionMessages(ChatMessage[] messages) returns chat:ChatCompletionRequestMessage[] {
+        chat:ChatCompletionRequestMessage[] completionMessages = [];
+        foreach ChatMessage message in messages {
+            if message is ChatAssistantMessage {
+                ToolCall[]? toolCalls = message.toolCalls;
+                if toolCalls is ToolCall[] {
+                    // Pick first tool call
+                    ToolCall toolCall = toolCalls[0];
+                    chat:ChatCompletionRequestAssistantMessage_function_call function_call = {
+                        'name: toolCall.name,
+                        arguments: toolCall.arguments
+                    };
+                    completionMessages.push({role: ASSISTANT, function_call});
+                } else {
+                    completionMessages.push({role: ASSISTANT, content: message.content ?: ""});
+
+                }
+            } else if message is ChatUserMessage {
+                completionMessages.push({role: USER, content: message.content});
+            } else if message is ChatSystemMessage {
+                completionMessages.push({role: SYSTEM, content: message.content});
+            } else if message is ChatFunctionMessage {
+                completionMessages.push({role: FUNCTION, content: message.content ?: "", name: message.name});
+            }
+        }
+        return completionMessages;
     }
 }
 
@@ -653,7 +685,7 @@ public isolated client class AnthropicModel {
         }
 
         ContentBlock[] contentBlocks = anthropicResponse.content;
-        string? content = contentBlocks.length() == 0 ? () : "";
+        string content = "";
         ToolCall[] toolCalls = [];
         foreach ContentBlock block in contentBlocks {
             string blockType = block.'type;
