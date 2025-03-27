@@ -32,12 +32,10 @@ import io.ballerina.compiler.syntax.tree.SyntaxKind;
 import io.ballerina.compiler.syntax.tree.Token;
 import io.ballerina.compiler.syntax.tree.TypeDescriptorNode;
 import io.ballerina.lib.ai.plugin.diagnostics.CompilationDiagnostic;
-import io.ballerina.projects.DocumentId;
 import io.ballerina.projects.plugins.AnalysisTask;
 import io.ballerina.projects.plugins.SyntaxNodeAnalysisContext;
 import io.ballerina.tools.diagnostics.Diagnostic;
 
-import java.util.Map;
 import java.util.Optional;
 
 import static io.ballerina.lib.ai.plugin.Utils.BALLERINAX_ORG;
@@ -50,11 +48,6 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
     private static final String AGENT_CLASS_NAME = "Agent";
     private static final String AGENT_MODULE_NAME = "agent";
     private static final String AI_MODULE_NAME = "ai";
-    private final Map<DocumentId, ModifierContext> modifierContextMap;
-
-    public ModuleLevelAgentAnalysisTask(Map<DocumentId, ModifierContext> modifierContextMap) {
-        this.modifierContextMap = modifierContextMap;
-    }
 
     @Override
     public void perform(SyntaxNodeAnalysisContext context) {
@@ -78,7 +71,6 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
             return;
         }
         validateAgentFinalQualifier(context, moduleVariableDeclarationNode);
-        addToModifierContext(context, moduleVariableDeclarationNode);
     }
 
     private void validateAgentFinalQualifier(SyntaxNodeAnalysisContext context,
@@ -90,12 +82,6 @@ class ModuleLevelAgentAnalysisTask implements AnalysisTask<SyntaxNodeAnalysisCon
                     moduleVariableDeclarationNode.location());
             context.reportDiagnostic(diagnostic);
         }
-    }
-
-    private void addToModifierContext(SyntaxNodeAnalysisContext context,
-                                      ModuleVariableDeclarationNode moduleVariableDeclarationNode) {
-        this.modifierContextMap.computeIfAbsent(context.documentId(), document -> new ModifierContext())
-                .add(moduleVariableDeclarationNode);
     }
 
     private String getAgentModuleNamePrefix(SyntaxNodeAnalysisContext context) {
