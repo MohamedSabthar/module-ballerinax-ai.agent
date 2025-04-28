@@ -107,7 +107,7 @@ function testExecuteSuccessfullOutput() returns error? {
                 messageRequest: {
                     to: ["alica@wso2.com"],
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
@@ -154,7 +154,7 @@ function testExecuteErrorOutput() returns error? {
                 messageRequest: {
                     to: ["alica@wso2.com"],
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
@@ -201,7 +201,7 @@ function testExecutionError() returns error? {
                 messageRequest: {
                     to: "alica@wso2.com", // errornous generation
                     subject: "Greetings Alica!",
-                    body: "<h1>Hi Alica</h1><p>Welcome to ai.agent module Alica</p>"
+                    body: "<h1>Hi Alica</h1><p>Welcome to ai module Alica</p>"
                 }
             }
         }
@@ -274,4 +274,46 @@ function testExecutionPanicError() returns error? {
 isolated function testInitializingToolStoreWithoutNoTools() returns error? {
     ToolStore toolStore = check new ();
     test:assertEquals(toolStore.tools.toArray().length(), 0);
+}
+
+@test:Config
+isolated function testToolExecutionWithEmptyQueryRecordParam() returns error? {
+    HttpTool httpGet =
+        {
+        name: "httpGet",
+        path: "/example-get",
+        method: GET,
+        description: "test HTTP GET tool",
+        parameters: {
+            "location": {
+                description: "location to get",
+                location: QUERY,
+                required: true,
+                schema: {
+                    'type: OBJECT,
+                    properties: {
+                        "street": {
+                            'type: STRING,
+                            description: "location to get"
+                        },
+                        "city": {
+                            'type: STRING,
+                            description: "location to get"
+                        }
+                    }
+                }
+            }
+        }
+    };
+    map<json> parameters = {
+        "name": "httpGet",
+        "arguments": {
+            "httpInput": {
+                "parameters": {
+                    "location": {}
+                }
+            }
+        }
+    };
+    string _ = check getParamEncodedPath(httpGet, parameters);
 }
